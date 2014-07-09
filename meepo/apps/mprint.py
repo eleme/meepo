@@ -2,7 +2,7 @@
 
 """
     meep.apps.mprint
-    ~~~~~~~~~~~~~~~~~~~~
+    ~~~~~~~~~~~~~~~~
 
     Event print app.
 """

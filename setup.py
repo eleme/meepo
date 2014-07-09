@@ -6,11 +6,13 @@ from setuptools import setup, find_packages
 # console_scripts
 cmds = [
     "mprint = meepo.apps.mprint:main",
+    "mreplicate = meepo.apps.mreplicate:main",
 ]
 
 
 # requirements
 install_requires = [
+    "click>=2.4",
     "SQLAlchemy>=0.9.6",
 ]
 
