@@ -53,7 +53,7 @@ def mysql_pub(mysql_dsn, **kwargs):
     def _pk(values):
         if isinstance(event.primary_key, str):
             return values[event.primary_key]
-        return (values[k] for k in event.primary_key)
+        return tuple(values[k] for k in event.primary_key)
 
     for event in _gen_stream():
         try:
