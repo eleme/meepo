@@ -49,6 +49,9 @@ def dbreplicate_sub(master_dsn, slave_dsn, tables=None):
         """
         MasterModel = master_base.classes[name]
         obj = MasterSession.query(MasterModel).get(pk)
+        if not obj:
+            logger.error("pk for {} not found in master: {}".format(name, pk))
+            return
 
         SlaveModel = slave_base.classes[name]
         columns = [c.name for c in SlaveModel.__table__.columns]
@@ -110,6 +113,8 @@ def dbreplicate_sub(master_dsn, slave_dsn, tables=None):
             _delete_by_pk(name, pk)
         signal("%s_delete" % name).connect(_sub_delete, weak=False)
 
-    tables = tables or slave_base.classes.keys()
+    if tables:
+        tables = [t for t in tables if t in slave_base.classes.keys()]
+
     for table in tables:
         _sub(table)
