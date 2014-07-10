@@ -23,7 +23,7 @@ logger = logging.getLogger("meepo.mreplicate")
 import click
 
 from meepo.pub import mysql_pub
-from meepo.sub import dbreplicate_sub
+from meepo.sub import replicate_sub
 
 
 @click.command()
@@ -35,5 +35,5 @@ def main(master_dsn, slave_dsn, tables):
     assert master_dsn.startswith("mysql")
 
     logger.info("replicating tables: %s" % ", ".join(tables))
-    dbreplicate_sub(master_dsn, slave_dsn, tables)
+    replicate_sub(master_dsn, slave_dsn, tables)
     mysql_pub(master_dsn)

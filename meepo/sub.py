@@ -20,7 +20,7 @@ def print_sub(tables):
         signal("{}_delete".format(table)).connect(_print, weak=False)
 
 
-def dbreplicate_sub(master_dsn, slave_dsn, tables=None):
+def replicate_sub(master_dsn, slave_dsn, tables=None):
     """Database replication subscriber.
 
     This meepo event sourcing system is based upon database primary key, so
@@ -29,7 +29,7 @@ def dbreplicate_sub(master_dsn, slave_dsn, tables=None):
     The function will subscribe to the event sourcing pk stream, retrive rows
     from master based pk and then update the slave.
     """
-    logger = logging.getLogger("meepo.sub.dbreplicate_sub")
+    logger = logging.getLogger("meepo.sub.replicate_sub")
 
     # sqlalchemy reflection
     logger.info("reflecting master database: {}".format(master_dsn))
