@@ -1,12 +1,16 @@
 # -*- coding: utf-8 -*-
 
+import functools
 import logging
+import time
 
 import sqlalchemy as sa
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.ext.automap import automap_base
 
 from blinker import signal
+
+import redis
 
 
 def print_sub(tables):
@@ -96,25 +100,53 @@ def replicate_sub(master_dsn, slave_dsn, tables=None):
         # cleanup
         SlaveSession.close()
 
-    def _sub(name):
+    def _sub(table):
 
         def _sub_write(pk):
-            logger.info("dbreplica_sub {}_write: {}".format(name, pk))
-            _write_by_pk(name, pk)
-        signal("%s_write" % name).connect(_sub_write, weak=False)
+            logger.info("dbreplica_sub {}_write: {}".format(table, pk))
+            _write_by_pk(table, pk)
+        signal("%s_write" % table).connect(_sub_write, weak=False)
 
         def _sub_update(pk):
-            logger.info("dbreplica_sub {}_update: {}".format(name, pk))
-            _update_by_pk(name, pk)
-        signal("%s_update" % name).connect(_sub_update, weak=False)
+            logger.info("dbreplica_sub {}_update: {}".format(table, pk))
+            _update_by_pk(table, pk)
+        signal("%s_update" % table).connect(_sub_update, weak=False)
 
         def _sub_delete(pk):
-            logger.info("dbreplica_sub {}_delete: {}".format(name, pk))
-            _delete_by_pk(name, pk)
-        signal("%s_delete" % name).connect(_sub_delete, weak=False)
+            logger.info("dbreplica_sub {}_delete: {}".format(table, pk))
+            _delete_by_pk(table, pk)
+        signal("%s_delete" % table).connect(_sub_delete, weak=False)
 
     if tables:
         tables = [t for t in tables if t in slave_base.classes.keys()]
 
     for table in tables:
         _sub(table)
+
+
+def es_sub(redis_dsn, tables, namespace=None):
+    """EventSourcing subscriber.
+
+    This subscriber will use redis as event sourcing storage layer.
+
+    Note here we only needs a 'weak' event sourcing, we only record primary
+    keys, which means we only care about what event happend after some time,
+    and ignore how many times it happens.
+    """
+    logger = logging.getLogger("meepo.sub.es_sub")
+    namespace = namespace or "meepo:es_sub"
+
+    r = redis.StrictRedis.from_url(redis_dsn)
+
+    for table in tables:
+        def _sub_action(action, pk):
+            logger.info("es_sub %s_%s: %s".format(table, action, pk))
+            key = "%s:%s_%s" % (namespace, table, action)
+            r.zadd(key, time.time(), str(pk))
+
+        signal("%s_write" % table).connect(
+            functools.partial(_sub_action, action="write"), weak=False)
+        signal("%s_update" % table).connect(
+            functools.partial(_sub_action, action="update"), weak=False)
+        signal("%s_delete" % table).connect(
+            functools.partial(_sub_action, action="delete"), weak=False)
