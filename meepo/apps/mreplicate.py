@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-    meep.apps.mreplicate
-    ~~~~~~~~~~~~~~~~~~~~
+    meepo.apps.mreplicate
+    ~~~~~~~~~~~~~~~~~~~~~
 
     Database replication app.
 
