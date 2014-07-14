@@ -140,13 +140,13 @@ def es_sub(redis_dsn, tables, namespace=None):
 
     for table in tables:
         def _sub_action(action, pk):
-            logger.info("es_sub %s_%s: %s".format(table, action, pk))
+            logger.info("es_sub %s_%s: %s" % (table, action, pk))
             key = "%s:%s_%s" % (namespace, table, action)
             r.zadd(key, time.time(), str(pk))
 
         signal("%s_write" % table).connect(
-            functools.partial(_sub_action, action="write"), weak=False)
+            functools.partial(_sub_action, "write"), weak=False)
         signal("%s_update" % table).connect(
-            functools.partial(_sub_action, action="update"), weak=False)
+            functools.partial(_sub_action, "update"), weak=False)
         signal("%s_delete" % table).connect(
-            functools.partial(_sub_action, action="delete"), weak=False)
+            functools.partial(_sub_action, "delete"), weak=False)

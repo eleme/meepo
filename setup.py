@@ -7,6 +7,7 @@ from setuptools import setup, find_packages
 cmds = [
     "mprint = meepo.apps.mprint:main",
     "mreplicate = meepo.apps.mreplicate:main",
+    "meventsourcing = meepo.apps.meventsourcing:main",
 ]
 
 

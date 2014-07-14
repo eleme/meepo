@@ -7,8 +7,8 @@ from urllib.parse import urlparse
 from blinker import signal
 
 
-def mysql_pub(mysql_dsn, **kwargs):
-    """Use mysql row based binlog events publisher.
+def mysql_pub(mysql_dsn, tables=None, **kwargs):
+    """MySQL row-based binlog events publisher.
 
     The additional kwargs will be passed to `BinLogStreamReader`.
     """
@@ -60,6 +60,9 @@ def mysql_pub(mysql_dsn, **kwargs):
             rows = event.rows
         except (UnicodeDecodeError, ValueError) as e:
             logger.error(e)
+            continue
+
+        if tables and event.table not in tables:
             continue
 
         if isinstance(event, WriteRowsEvent):
