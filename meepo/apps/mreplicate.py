@@ -34,6 +34,10 @@ def main(master_dsn, slave_dsn, tables):
     # currently only supports mysql master
     assert master_dsn.startswith("mysql")
 
-    logger.info("replicating tables: %s" % ", ".join(tables))
+    if tables:
+        logger.info("replicating tables: %s" % ", ".join(tables))
+    else:
+        tables = None
+
     replicate_sub(master_dsn, slave_dsn, tables)
     mysql_pub(master_dsn)

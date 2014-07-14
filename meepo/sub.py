@@ -139,7 +139,7 @@ def es_sub(redis_dsn, tables, namespace=None):
     r = redis.StrictRedis.from_url(redis_dsn)
 
     for table in tables:
-        def _sub_action(action, pk):
+        def _sub_action(action, pk, table=table):
             logger.info("es_sub %s_%s: %s" % (table, action, pk))
             key = "%s:%s_%s" % (namespace, table, action)
             r.zadd(key, time.time(), str(pk))
