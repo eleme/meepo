@@ -17,6 +17,8 @@ def print_sub(tables):
     """Events print subscriber.
     """
     logger = logging.getLogger("meepo.sub.print_sub")
+    logger.info("print_sub tables: %s" % ", ".join(tables))
+
     for table in tables:
         _print = lambda pk, t=table: logger.info("{} -> {}".format(t, pk))
         signal("{}_write".format(table)).connect(_print, weak=False)
