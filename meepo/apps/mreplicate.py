@@ -15,10 +15,7 @@
 """
 
 import logging
-logging.getLogger().addHandler(logging.StreamHandler())
-logging.getLogger().setLevel(logging.INFO)
-
-logger = logging.getLogger("meepo.mreplicate")
+logger = logging.getLogger(__name__)
 
 import click
 

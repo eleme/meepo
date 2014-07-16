@@ -11,10 +11,6 @@
 """
 
 import logging
-logging.getLogger().addHandler(logging.StreamHandler())
-logging.getLogger().setLevel(logging.INFO)
-
-logger = logging.getLogger("meepo.meventsourcing")
 
 import click
 
@@ -28,6 +24,8 @@ from meepo.sub import es_sub
 @click.option('--namespace')
 @click.argument('tables', nargs=-1)
 def main(master_dsn, redis_dsn, tables, namespace=None):
+    logger = logging.getLogger(__name__)
+
     # currently only supports mysql master
     assert master_dsn and master_dsn.startswith("mysql")
     assert redis_dsn and redis_dsn.startswith("redis")
