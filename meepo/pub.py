@@ -96,15 +96,16 @@ def mysql_pub(mysql_dsn, tables=None, **kwargs):
                 logger.debug("{} -> {}".format(sg_name, pk))
 
 
-def sqlalchemy_pub(dbsession, strict=False):
+def sqlalchemy_pub(dbsession, strict_tables=None):
     """SQLAlchemy events publisher.
 
     This publisher don't publish events itself, it will hook on sqlalchemy's
     event system, and publish the changes automatically.
 
-    When `strict` set to True, it will use a prepare-commit pattern to help
-    ensure 100% reliablity on event sourcing (and broadcasting), not this will
-    need another monitor daemon to monitor the states. For more info about
+    When `strict_tables` provided, two more signals may be triggered for table
+    included. They can be used with prepare-commit pattern to help ensure 100%
+    reliablity on event sourcing (and broadcasting), note this will
+    need another monitor daemon to monitor the status. For more info about
     this patter, refer to documentation.
     """
     from sqlalchemy import event
@@ -161,3 +162,47 @@ def sqlalchemy_pub(dbsession, strict=False):
         del session.pending_update
         del session.pending_delete
     event.listen(dbsession, "after_commit", after_commit_hook)
+
+    if strict_tables:
+        def _strict_filter(objs):
+            for obj in objs:
+                if obj.__table__.fullname in strict_tables:
+                    yield obj
+
+        def _prepare_pub(obj, action, rollback=False):
+            if not rollback:
+                sg_name = "prepare_{}_{}".format(obj.__table__, action)
+            else:
+                sg_name = "unprepare_{}_{}".format(obj.__table__, action)
+            sg = signal(sg_name)
+
+            pk = _pk(obj)
+            if pk:
+                sg.send(pk)
+                logger.debug("{} -> {}".format(sg_name, pk))
+
+        def prepare_hook(session):
+            """Add prepare records before commit
+            """
+            for obj in _strict_filter(session.pending_write):
+                _prepare_pub(obj, action="write")
+
+            for obj in _strict_filter(session.pending_update):
+                _prepare_pub(obj, action="update")
+
+            for obj in _strict_filter(session.pending_delete):
+                _prepare_pub(obj, action="delete")
+        event.listen(dbsession, "before_commit", prepare_hook)
+
+        def unprepare_hook(session):
+            """Remove prepare records after rollback
+            """
+            for obj in _strict_filter(session.pending_write):
+                _prepare_pub(obj, "write", rollback=True)
+
+            for obj in _strict_filter(session.pending_update):
+                _prepare_pub(obj, "update", rollback=True)
+
+            for obj in _strict_filter(session.pending_delete):
+                _prepare_pub(obj, "delete", rollback=True)
+        event.listen(dbsession, "after_rollback", unprepare_hook)
