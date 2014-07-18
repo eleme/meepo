@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
+import collections
 import logging
+import uuid
 
 from urllib.parse import urlparse
 
@@ -148,9 +150,7 @@ def sqlalchemy_pub(dbsession, strict_tables=None):
         session.pending_delete |= set(session.deleted)
     event.listen(dbsession, "after_flush", after_flush_hook)
 
-    def after_commit_hook(session):
-        """Publish signals
-        """
+    def _pub_session(session):
         for obj in session.pending_write:
             _pub(obj, action="write")
         for obj in session.pending_update:
@@ -161,48 +161,50 @@ def sqlalchemy_pub(dbsession, strict_tables=None):
         del session.pending_write
         del session.pending_update
         del session.pending_delete
-    event.listen(dbsession, "after_commit", after_commit_hook)
 
-    if strict_tables:
+    if not strict_tables:
+        def after_commit_hook(session):
+            """Publish signals
+            """
+            _pub_session(session)
+        event.listen(dbsession, "after_commit", after_commit_hook)
+
+    else:
         def _strict_filter(objs):
-            for obj in objs:
-                if obj.__table__.fullname in strict_tables:
-                    yield obj
+            return (obj for obj in objs
+                    if obj.__table__.fullname in strict_tables)
 
-        def _prepare_pub(obj, action, rollback=False):
-            if not rollback:
-                sg_name = "prepare_{}_{}".format(obj.__table__, action)
-            else:
-                sg_name = "unprepare_{}_{}".format(obj.__table__, action)
-            sg = signal(sg_name)
-
-            pk = _pk(obj)
-            if pk:
-                sg.send(pk)
-                logger.debug("{} -> {}".format(sg_name, pk))
-
-        def prepare_hook(session):
-            """Add prepare records before commit
+        def session_prepare(session):
+            """Record session prepare state in before_commit
             """
-            for obj in _strict_filter(session.pending_write):
-                _prepare_pub(obj, action="write")
+            assert not hasattr(session, 'meepo_unique_id')
+            session.meepo_unique_id = uuid.uuid4().hex
+            for action in ("write", "update", "delete"):
+                prepare_event = collections.defaultdict(set)
+                objs = (o for o in getattr(session, "pending_%s" % action)
+                        if o.__table__.fullname in strict_tables)
+                for obj in objs:
+                    prepare_event[obj.__table__.fullname].add(_pk(obj))
+                signal("session_prepare").send(
+                    prepare_event, sid=session.meepo_unique_id, action=action)
+        event.listen(dbsession, "before_commit", session_prepare)
 
-            for obj in _strict_filter(session.pending_update):
-                _prepare_pub(obj, action="update")
-
-            for obj in _strict_filter(session.pending_delete):
-                _prepare_pub(obj, action="delete")
-        event.listen(dbsession, "before_commit", prepare_hook)
-
-        def unprepare_hook(session):
-            """Remove prepare records after rollback
+        def session_commit(session):
+            """Commit session in after_commit
             """
-            for obj in _strict_filter(session.pending_write):
-                _prepare_pub(obj, "write", rollback=True)
+            assert hasattr(session, 'meepo_unique_id')
 
-            for obj in _strict_filter(session.pending_update):
-                _prepare_pub(obj, "update", rollback=True)
+            # normal session pub
+            _pub_session(session)
 
-            for obj in _strict_filter(session.pending_delete):
-                _prepare_pub(obj, "delete", rollback=True)
-        event.listen(dbsession, "after_rollback", unprepare_hook)
+            signal("session_commit").send(session.meepo_unique_id)
+            del session.meepo_unique_id
+        event.listen(dbsession, "after_commit", session_commit)
+
+        def session_rollback(session):
+            """Unprepare session in after_rollback.
+            """
+            assert hasattr(session, 'meepo_unique_id')
+            signal("session_rollback").send(session.meepo_unique_id)
+            del session.meepo_unique_id
+        event.listen(dbsession, "after_rollback", session_rollback)
