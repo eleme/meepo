@@ -2,6 +2,7 @@
 
 import functools
 import logging
+import pickle
 import time
 
 import sqlalchemy as sa
@@ -152,3 +153,37 @@ def es_sub(redis_dsn, tables, namespace=None):
             functools.partial(_sub, "update"), weak=False)
         signal("%s_delete" % table).connect(
             functools.partial(_sub, "delete"), weak=False)
+
+    # session hooks for strict prepare-commit pattern
+
+    def session_prepare_hook(event, sid, action):
+        """Record session prepare state.
+        """
+        logger.info("session_prepare %s -> %s" % (action, sid))
+
+        sp_all = "%s:session_prepare" % namespace
+        sp_key = "%s:session_prepare:%s" % (namespace, sid)
+
+        pipe = r.pipeline()
+        pipe.sadd(sp_all, sid)
+        pipe.hset(sp_key, action, pickle.dumps(event))
+        pipe.execute()
+    signal("session_prepare").connect(session_prepare_hook)
+
+    def _clean_sid(sid):
+        sp_all = "%s:session_prepare" % namespace
+        sp_key = "%s:session_prepare:%s" % (namespace, sid)
+        pipe = r.pipeline()
+        pipe.srem(sp_all, sid)
+        pipe.delete(sp_key)
+        pipe.execute()
+
+    def session_commit_hook(sid):
+        logger.info("session_commit -> %s" % sid)
+        _clean_sid(sid)
+    signal("session_commit").connect(session_commit_hook)
+
+    def session_rollback_hook(sid):
+        logger.info("session_rollback -> %s" % sid)
+        _clean_sid(sid)
+    signal("session_rollback").connect(session_rollback_hook)
