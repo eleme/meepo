@@ -19,7 +19,7 @@ def print_sub(tables):
     logger = logging.getLogger("meepo.sub.print_sub")
     logger.info("print_sub tables: %s" % ", ".join(tables))
 
-    for table in tables:
+    for table in set(tables):
         _print = lambda pk, t=table: logger.info("{} -> {}".format(t, pk))
         signal("{}_write".format(table)).connect(_print, weak=False)
         signal("{}_update".format(table)).connect(_print, weak=False)
@@ -120,7 +120,7 @@ def replicate_sub(master_dsn, slave_dsn, tables=None):
         signal("%s_delete" % table).connect(_sub_delete, weak=False)
 
     if tables:
-        tables = [t for t in tables if t in slave_base.classes.keys()]
+        tables = (t for t in tables if t in slave_base.classes.keys())
 
     for table in tables:
         _sub(table)
@@ -140,15 +140,15 @@ def es_sub(redis_dsn, tables, namespace=None):
 
     r = redis.StrictRedis.from_url(redis_dsn)
 
-    for table in tables:
-        def _sub_action(action, pk, table=table):
+    for table in set(tables):
+        def _sub(action, pk, table=table):
             logger.info("es_sub %s_%s: %s" % (table, action, pk))
             key = "%s:%s_%s" % (namespace, table, action)
             r.zadd(key, time.time(), str(pk))
 
         signal("%s_write" % table).connect(
-            functools.partial(_sub_action, "write"), weak=False)
+            functools.partial(_sub, "write"), weak=False)
         signal("%s_update" % table).connect(
-            functools.partial(_sub_action, "update"), weak=False)
+            functools.partial(_sub, "update"), weak=False)
         signal("%s_delete" % table).connect(
-            functools.partial(_sub_action, "delete"), weak=False)
+            functools.partial(_sub, "delete"), weak=False)
