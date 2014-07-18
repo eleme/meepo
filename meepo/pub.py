@@ -180,9 +180,12 @@ def sqlalchemy_pub(dbsession, strict_tables=None):
             assert not hasattr(session, 'meepo_unique_id')
             session.meepo_unique_id = uuid.uuid4().hex
             for action in ("write", "update", "delete"):
+                objs = [o for o in getattr(session, "pending_%s" % action)
+                        if o.__table__.fullname in strict_tables]
+                if not objs:
+                    return
+
                 prepare_event = collections.defaultdict(set)
-                objs = (o for o in getattr(session, "pending_%s" % action)
-                        if o.__table__.fullname in strict_tables)
                 for obj in objs:
                     prepare_event[obj.__table__.fullname].add(_pk(obj))
                 signal("session_prepare").send(
