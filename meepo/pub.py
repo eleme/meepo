@@ -9,7 +9,7 @@ from urllib.parse import urlparse
 from blinker import signal
 
 
-def mysql_pub(mysql_dsn, tables=None, **kwargs):
+def mysql_pub(mysql_dsn, tables=None, blocking=True, server_id=None, **kwargs):
     """MySQL row-based binlog events publisher.
 
     The additional kwargs will be passed to `BinLogStreamReader`.
@@ -36,32 +36,21 @@ def mysql_pub(mysql_dsn, tables=None, **kwargs):
     # connect to binlog stream
     stream = pymysqlreplication.BinLogStreamReader(
         connection_settings=mysql_settings,
-        resume_stream=True,
-        blocking=True,
+        blocking=blocking,
         only_events=[DeleteRowsEvent, UpdateRowsEvent, WriteRowsEvent],
         **kwargs
     )
-
-    def _gen_stream():
-        """Use gen_stream to try-except wrap a stream generator to make sure
-        it always keeps on running.
-        """
-        while True:
-            try:
-                yield from stream
-            except KeyError as e:
-                logger.info(str(e))
 
     def _pk(values):
         if isinstance(event.primary_key, str):
             return values[event.primary_key]
         return tuple(values[k] for k in event.primary_key)
 
-    for event in _gen_stream():
+    for event in stream:
         try:
             rows = event.rows
         except (UnicodeDecodeError, ValueError) as e:
-            logger.error(e)
+            logger.exception(e)
             continue
 
         if tables and event.table not in tables:

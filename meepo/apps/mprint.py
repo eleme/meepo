@@ -21,4 +21,4 @@ from meepo.logutils import setup_logger
 def main(mysql_dsn, tables):
     setup_logger('DEBUG')
     print_sub(tables)
-    mysql_pub(mysql_dsn)
+    mysql_pub(mysql_dsn, blocking=False)
