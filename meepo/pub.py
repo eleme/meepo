@@ -131,8 +131,8 @@ def sqlalchemy_pub(dbsession, strict_tables=None):
 
         pk = _pk(obj)
         if pk:
-            sg.send(pk)
             logger.debug("{} -> {}".format(sg_name, pk))
+            sg.send(pk)
 
     def after_begin_hook(session, transaction, connection):
         """Init pending sets
@@ -170,6 +170,8 @@ def sqlalchemy_pub(dbsession, strict_tables=None):
         event.listen(dbsession, "after_commit", after_commit_hook)
 
     else:
+        logger.debug("strict_tables: {}".format(strict_tables))
+
         def _strict_filter(objs):
             return (obj for obj in objs
                     if obj.__table__.fullname in strict_tables)
@@ -183,11 +185,13 @@ def sqlalchemy_pub(dbsession, strict_tables=None):
                 objs = [o for o in getattr(session, "pending_%s" % action)
                         if o.__table__.fullname in strict_tables]
                 if not objs:
-                    return
+                    continue
 
                 prepare_event = collections.defaultdict(set)
                 for obj in objs:
                     prepare_event[obj.__table__.fullname].add(_pk(obj))
+                logger.debug("session_prepare {}: {} -> {}".format(
+                    action, session.meepo_unique_id, prepare_event))
                 signal("session_prepare").send(
                     prepare_event, sid=session.meepo_unique_id, action=action)
         event.listen(dbsession, "before_commit", session_prepare)
@@ -200,6 +204,7 @@ def sqlalchemy_pub(dbsession, strict_tables=None):
             # normal session pub
             _pub_session(session)
 
+            logger.debug("session_commit: {}".format(session.meepo_unique_id))
             signal("session_commit").send(session.meepo_unique_id)
             del session.meepo_unique_id
         event.listen(dbsession, "after_commit", session_commit)
@@ -208,6 +213,8 @@ def sqlalchemy_pub(dbsession, strict_tables=None):
             """Unprepare session in after_rollback.
             """
             assert hasattr(session, 'meepo_unique_id')
+            logger.debug("session_rollback: {}".format(
+                session.meepo_unique_id))
             signal("session_rollback").send(session.meepo_unique_id)
             del session.meepo_unique_id
         event.listen(dbsession, "after_rollback", session_rollback)

@@ -156,6 +156,14 @@ def es_sub(redis_dsn, tables, namespace=None):
 
     # session hooks for strict prepare-commit pattern
 
+    def _clean_sid(sid):
+        sp_all = "%s:session_prepare" % namespace
+        sp_key = "%s:session_prepare:%s" % (namespace, sid)
+        pipe = r.pipeline()
+        pipe.srem(sp_all, sid)
+        pipe.expire(sp_key, 60 * 60)
+        pipe.execute()
+
     def session_prepare_hook(event, sid, action):
         """Record session prepare state.
         """
@@ -168,22 +176,14 @@ def es_sub(redis_dsn, tables, namespace=None):
         pipe.sadd(sp_all, sid)
         pipe.hset(sp_key, action, pickle.dumps(event))
         pipe.execute()
-    signal("session_prepare").connect(session_prepare_hook)
-
-    def _clean_sid(sid):
-        sp_all = "%s:session_prepare" % namespace
-        sp_key = "%s:session_prepare:%s" % (namespace, sid)
-        pipe = r.pipeline()
-        pipe.srem(sp_all, sid)
-        pipe.delete(sp_key)
-        pipe.execute()
+    signal("session_prepare").connect(session_prepare_hook, weak=False)
 
     def session_commit_hook(sid):
         logger.info("session_commit -> %s" % sid)
         _clean_sid(sid)
-    signal("session_commit").connect(session_commit_hook)
+    signal("session_commit").connect(session_commit_hook, weak=False)
 
     def session_rollback_hook(sid):
         logger.info("session_rollback -> %s" % sid)
         _clean_sid(sid)
-    signal("session_rollback").connect(session_rollback_hook)
+    signal("session_rollback").connect(session_rollback_hook, weak=False)
