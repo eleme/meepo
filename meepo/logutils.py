@@ -10,14 +10,14 @@ def setup_logger(level=None):
 
         'root': {
             'handlers': ['console'],
-            'level': level or 'INFO',
+            'level': 'INFO',
         },
 
         'loggers': {
             'meepo': {
                 'handlers': ['console'],
                 'propagate': False,
-                'level': 'INFO',
+                'level': level or 'INFO',
             },
         },
 
