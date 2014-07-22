@@ -86,6 +86,9 @@ def mysql_pub(mysql_dsn, tables=None, blocking=True, server_id=None, **kwargs):
 
                 logger.debug("{} -> {}".format(sg_name, pk))
 
+        signal("mysql_binlog_pos").send("{}:{}".format(stream.log_file,
+                                                       stream.log_pos))
+
 
 def sqlalchemy_pub(dbsession, strict_tables=None):
     """SQLAlchemy events publisher.
