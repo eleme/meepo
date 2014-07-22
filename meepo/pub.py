@@ -37,6 +37,7 @@ def mysql_pub(mysql_dsn, tables=None, blocking=True, server_id=None, **kwargs):
     stream = pymysqlreplication.BinLogStreamReader(
         connection_settings=mysql_settings,
         blocking=blocking,
+        server_id=server_id,
         only_events=[DeleteRowsEvent, UpdateRowsEvent, WriteRowsEvent],
         **kwargs
     )
