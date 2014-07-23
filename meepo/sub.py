@@ -8,6 +8,7 @@ import pickle
 import sqlalchemy as sa
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.ext.automap import automap_base
+from sqlalchemy.exc import SQLAlchemyError
 
 from blinker import signal
 
@@ -66,7 +67,12 @@ def replicate_sub(master_dsn, slave_dsn, tables=None):
                               for k, v in obj.__dict__.items()
                               if k in columns})
         SlaveSession.add(s_obj)
-        SlaveSession.commit()
+
+        try:
+            SlaveSession.commit()
+        except SQLAlchemyError as e:
+            SlaveSession.rollback()
+            logger.exception(e)
 
         # cleanup
         MasterSession.close()
@@ -85,8 +91,17 @@ def replicate_sub(master_dsn, slave_dsn, tables=None):
 
         columns = [c.name for c in SlaveModel.__table__.columns]
         for col in columns:
-            setattr(s_obj, col, getattr(obj, col))
-        SlaveSession.commit()
+            try:
+                val = getattr(obj, col)
+            except AttributeError as e:
+                continue
+            setattr(s_obj, col, val)
+
+        try:
+            SlaveSession.commit()
+        except SQLAlchemyError as e:
+            SlaveSession.rollback()
+            logger.exception(e)
 
         # cleanup
         MasterSession.close()
@@ -105,18 +120,23 @@ def replicate_sub(master_dsn, slave_dsn, tables=None):
 
     def _sub(table):
 
-        def _sub_write(pk):
-            logger.info("dbreplica_sub {}_write: {}".format(table, pk))
+        _datetime = lambda x: datetime.datetime.fromtimestamp(x) if x else ''
+
+        def _sub_write(pk, timestamp=None):
+            logger.info("dbreplica_sub {}_write: {} {}".format(
+                table, pk, _datetime(timestamp)))
             _write_by_pk(table, pk)
         signal("%s_write" % table).connect(_sub_write, weak=False)
 
-        def _sub_update(pk):
-            logger.info("dbreplica_sub {}_update: {}".format(table, pk))
+        def _sub_update(pk, timestamp=None):
+            logger.info("dbreplica_sub {}_update: {} {}".format(
+                table, pk, _datetime(timestamp)))
             _update_by_pk(table, pk)
         signal("%s_update" % table).connect(_sub_update, weak=False)
 
-        def _sub_delete(pk):
-            logger.info("dbreplica_sub {}_delete: {}".format(table, pk))
+        def _sub_delete(pk, timestamp=None):
+            logger.info("dbreplica_sub {}_delete: {} {}".format(
+                table, pk, _datetime(timestamp)))
             _delete_by_pk(table, pk)
         signal("%s_delete" % table).connect(_sub_delete, weak=False)
 
