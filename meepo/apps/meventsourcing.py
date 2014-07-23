@@ -17,6 +17,8 @@ import click
 from meepo.pub import mysql_pub
 from meepo.sub import es_sub
 
+from meepo.logutils import setup_logger
+
 
 @click.command()
 @click.option('-m', '--master_dsn')
@@ -24,6 +26,8 @@ from meepo.sub import es_sub
 @click.option('--namespace')
 @click.argument('tables', nargs=-1)
 def main(master_dsn, redis_dsn, tables, namespace=None):
+    setup_logger()
+
     logger = logging.getLogger(__name__)
 
     # currently only supports mysql master

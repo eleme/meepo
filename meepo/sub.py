@@ -140,13 +140,31 @@ def es_sub(redis_dsn, tables, namespace=None):
 
     r = redis.StrictRedis.from_url(redis_dsn)
 
+    LUA_TIME = """
+    local time = redis.call('TIME')
+    return tonumber(time[1])
+    """
+    LUA_ZADD = """
+    local score = redis.call('ZSCORE', KEYS[1], ARGV[2])
+    if score and ARGV[1] <= score then
+        return 0
+    else
+        redis.call('ZADD', KEYS[1], ARGV[1], ARGV[2])
+        return 1
+    end
+    """
+
+    r_time = r.register_script(LUA_TIME)
+    r_zadd = r.register_script(LUA_ZADD)
+
     for table in set(tables):
         def _sub(action, pk, table=table):
-            logger.info("es_sub %s_%s: %s" % (table, action, pk))
             key = "%s:%s_%s" % (namespace, table, action)
-            with r.pipeline() as p:
-                time = int(p.time()[0])
-                p.zadd(key, time, str(pk))
+            time = r_time()
+            if r_zadd(keys=[key], args=[time, pickle.dumps(pk)]):
+                logger.info("%s_%s: %s -> %s" % (table, action, pk, time))
+            else:
+                logger.info("%s_%s: %s -> skip" % (table, action, pk))
 
         signal("%s_write" % table).connect(
             functools.partial(_sub, "write"), weak=False)
