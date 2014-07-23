@@ -3,7 +3,6 @@
 import functools
 import logging
 import pickle
-import time
 
 import sqlalchemy as sa
 from sqlalchemy.orm import scoped_session, sessionmaker
@@ -145,7 +144,9 @@ def es_sub(redis_dsn, tables, namespace=None):
         def _sub(action, pk, table=table):
             logger.info("es_sub %s_%s: %s" % (table, action, pk))
             key = "%s:%s_%s" % (namespace, table, action)
-            r.zadd(key, time.time(), str(pk))
+            with r.pipeline() as p:
+                time = int(p.time()[0])
+                p.zadd(key, time, str(pk))
 
         signal("%s_write" % table).connect(
             functools.partial(_sub, "write"), weak=False)
@@ -159,10 +160,9 @@ def es_sub(redis_dsn, tables, namespace=None):
     def _clean_sid(sid):
         sp_all = "%s:session_prepare" % namespace
         sp_key = "%s:session_prepare:%s" % (namespace, sid)
-        pipe = r.pipeline()
-        pipe.srem(sp_all, sid)
-        pipe.expire(sp_key, 60 * 60)
-        pipe.execute()
+        with r.pipeline() as p:
+            p.srem(sp_all, sid)
+            p.expire(sp_key, 60 * 60)
 
     def session_prepare_hook(event, sid, action):
         """Record session prepare state.
@@ -172,10 +172,9 @@ def es_sub(redis_dsn, tables, namespace=None):
         sp_all = "%s:session_prepare" % namespace
         sp_key = "%s:session_prepare:%s" % (namespace, sid)
 
-        pipe = r.pipeline()
-        pipe.sadd(sp_all, sid)
-        pipe.hset(sp_key, action, pickle.dumps(event))
-        pipe.execute()
+        with r.pipeline() as p:
+            p.sadd(sp_all, sid)
+            p.hset(sp_key, action, pickle.dumps(event))
     signal("session_prepare").connect(session_prepare_hook, weak=False)
 
     def session_commit_hook(sid):
