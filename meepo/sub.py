@@ -223,3 +223,31 @@ def es_sub(redis_dsn, tables, namespace=None):
         logger.info("session_rollback -> %s" % sid)
         _clean_sid(sid)
     signal("session_rollback").connect(session_rollback_hook, weak=False)
+
+
+def nano_sub(bind, tables):
+    """Nanomsg fanout subscriber.
+
+    This subscriber will use nanomsg to publish the event to outside.
+
+    TODO: The pub_socket here will not close due to the sub pattern here.
+    Need to figure out a way to close it later.
+    """
+    logger = logging.getLogger("meepo.sub.nano_sub")
+
+    from nanomsg import Socket, PUB
+
+    pub_socket = Socket(PUB)
+    pub_socket.bind(bind)
+
+    def _sub(table):
+        for action in ("write", "update", "delete"):
+            def _sub(pk, action=action):
+                msg = bytes("%s_%s %s" % (table, action, pk), 'utf-8')
+                logger.debug("pub msg %s" % msg)
+                pub_socket.send(msg)
+
+            signal("%s_%s" % (table, action)).connect(_sub, weak=False)
+
+    for table in set(tables):
+        _sub(table)
