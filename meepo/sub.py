@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import datetime
 import functools
 import logging
 import pickle
@@ -161,8 +162,10 @@ def es_sub(redis_dsn, tables, namespace=None):
         def _sub(action, pk, table=table):
             key = "%s:%s_%s" % (namespace, table, action)
             time = r_time()
-            if r_zadd(keys=[key], args=[time, pickle.dumps(pk)]):
-                logger.info("%s_%s: %s -> %s" % (table, action, pk, time))
+            if r_zadd(keys=[key], args=[time, str(pk)]):
+                logger.info("%s_%s: %s -> %s" % (
+                    table, action, pk,
+                    datetime.datetime.fromtimestamp(time)))
             else:
                 logger.info("%s_%s: %s -> skip" % (table, action, pk))
 
