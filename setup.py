@@ -5,9 +5,10 @@ from setuptools import setup, find_packages
 
 # console_scripts
 cmds = [
+    "meventsourcing = meepo.apps.meventsourcing:main",
+    "mnano = meepo.apps.mnano:main",
     "mprint = meepo.apps.mprint:main",
     "mreplicate = meepo.apps.mreplicate:main",
-    "meventsourcing = meepo.apps.meventsourcing:main",
 ]
 
 
