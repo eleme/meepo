@@ -65,7 +65,7 @@ def mysql_pub(mysql_dsn, tables=None, blocking=True, server_id=None, **kwargs):
 
             for row in rows:
                 pk = _pk(row["values"])
-                sg.send(pk)
+                sg.send(pk, timestamp=event.timestamp)
 
                 logger.debug("{} -> {}".format(sg_name, pk))
 
@@ -75,7 +75,7 @@ def mysql_pub(mysql_dsn, tables=None, blocking=True, server_id=None, **kwargs):
 
             for row in rows:
                 pk = _pk(row["after_values"])
-                sg.send(pk)
+                sg.send(pk, timestamp=event.timestamp)
 
                 logger.debug("{} -> {}".format(sg_name, pk))
 
@@ -85,7 +85,7 @@ def mysql_pub(mysql_dsn, tables=None, blocking=True, server_id=None, **kwargs):
 
             for row in rows:
                 pk = _pk(row["values"])
-                sg.send(pk)
+                sg.send(pk, timestamp=event.timestamp)
 
                 logger.debug("{} -> {}".format(sg_name, pk))
 
