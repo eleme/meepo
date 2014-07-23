@@ -2,6 +2,7 @@
 
 import collections
 import logging
+import random
 import uuid
 
 from urllib.parse import urlparse
@@ -32,6 +33,7 @@ def mysql_pub(mysql_dsn, tables=None, blocking=True, server_id=None, **kwargs):
         "user": parsed.username,
         "passwd": parsed.password
     }
+    server_id = server_id or random.randint(1000000000, 4294967295)
 
     # connect to binlog stream
     stream = pymysqlreplication.BinLogStreamReader(
