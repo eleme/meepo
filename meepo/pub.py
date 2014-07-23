@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import collections
+import datetime
 import logging
 import random
 import uuid
@@ -59,15 +60,17 @@ def mysql_pub(mysql_dsn, tables=None, blocking=True, server_id=None, **kwargs):
         if tables and event.table not in tables:
             continue
 
+        timestamp = datetime.datetime.fromtimestamp(event.timestamp)
+
         if isinstance(event, WriteRowsEvent):
             sg_name = "{}_write".format(event.table)
             sg = signal(sg_name)
 
             for row in rows:
                 pk = _pk(row["values"])
-                sg.send(pk, timestamp=event.timestamp)
+                sg.send(pk)
 
-                logger.debug("{} -> {}".format(sg_name, pk))
+                logger.debug("{} -> {}, {}".format(sg_name, pk, timestamp))
 
         elif isinstance(event, UpdateRowsEvent):
             sg_name = "{}_update".format(event.table)
@@ -75,9 +78,9 @@ def mysql_pub(mysql_dsn, tables=None, blocking=True, server_id=None, **kwargs):
 
             for row in rows:
                 pk = _pk(row["after_values"])
-                sg.send(pk, timestamp=event.timestamp)
+                sg.send(pk)
 
-                logger.debug("{} -> {}".format(sg_name, pk))
+                logger.debug("{} -> {}, {}".format(sg_name, pk, timestamp))
 
         elif isinstance(event, DeleteRowsEvent):
             sg_name = "{}_delete".format(event.table)
@@ -85,9 +88,9 @@ def mysql_pub(mysql_dsn, tables=None, blocking=True, server_id=None, **kwargs):
 
             for row in rows:
                 pk = _pk(row["values"])
-                sg.send(pk, timestamp=event.timestamp)
+                sg.send(pk)
 
-                logger.debug("{} -> {}".format(sg_name, pk))
+                logger.debug("{} -> {}, {}".format(sg_name, pk, timestamp))
 
         signal("mysql_binlog_pos").send("{}:{}".format(stream.log_file,
                                                        stream.log_pos))

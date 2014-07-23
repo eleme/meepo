@@ -112,7 +112,8 @@ def replicate_sub(master_dsn, slave_dsn, tables=None):
         """
         Model = slave_base.classes[name]
         obj = SlaveSession.query(Model).get(pk)
-        SlaveSession.delete(obj)
+        if obj:
+            SlaveSession.delete(obj)
         SlaveSession.commit()
 
         # cleanup
@@ -120,23 +121,18 @@ def replicate_sub(master_dsn, slave_dsn, tables=None):
 
     def _sub(table):
 
-        _datetime = lambda x: datetime.datetime.fromtimestamp(x) if x else ''
-
-        def _sub_write(pk, timestamp=None):
-            logger.info("dbreplica_sub {}_write: {} {}".format(
-                table, pk, _datetime(timestamp)))
+        def _sub_write(pk):
+            logger.info("dbreplica_sub {}_write: {}".format(table, pk))
             _write_by_pk(table, pk)
         signal("%s_write" % table).connect(_sub_write, weak=False)
 
-        def _sub_update(pk, timestamp=None):
-            logger.info("dbreplica_sub {}_update: {} {}".format(
-                table, pk, _datetime(timestamp)))
+        def _sub_update(pk):
+            logger.info("dbreplica_sub {}_update: {}".format(table, pk))
             _update_by_pk(table, pk)
         signal("%s_update" % table).connect(_sub_update, weak=False)
 
-        def _sub_delete(pk, timestamp=None):
-            logger.info("dbreplica_sub {}_delete: {} {}".format(
-                table, pk, _datetime(timestamp)))
+        def _sub_delete(pk):
+            logger.info("dbreplica_sub {}_delete: {}".format(table, pk))
             _delete_by_pk(table, pk)
         signal("%s_delete" % table).connect(_sub_delete, weak=False)
 
