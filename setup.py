@@ -14,12 +14,18 @@ cmds = [
 
 # requirements
 install_requires = [
-    "click>=2.4",
-    "SQLAlchemy>=0.9.6",
+    "click>=2.4,<2.5",
+    "SQLAlchemy>=0.9.7,<1.0.0",
+    "redis>=2.10.1,<2.11.0",
 ]
 
 mysqlbinlog_requires = [
-    "mysql-replication>=0.2.0",
+    "mysql-replication==0.3.0",
+]
+
+# nanomsg is still in beta
+nanomsg_requires = [
+    "nanomsg",
 ]
 
 dev_requires = [
@@ -43,8 +49,9 @@ setup(name="meepo",
       long_description=open("README.rst").read(),
       install_requires=install_requires,
       extras_require={
-          "mysqlbinlog": mysqlbinlog_requires,
           "dev": dev_requires,
+          "mysqlbinlog": mysqlbinlog_requires,
+          "nano": nanomsg_requires,
       },
       classifiers=[
           "Topic :: Software Development",
