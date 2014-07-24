@@ -9,13 +9,15 @@ cmds = [
     "mnano = meepo.apps.mnano:main",
     "mprint = meepo.apps.mprint:main",
     "mreplicate = meepo.apps.mreplicate:main",
+    "mzmq = meepo.apps.mzmq:main",
 ]
 
 
 # requirements
 install_requires = [
-    "click>=2.4,<2.5",
     "SQLAlchemy>=0.9.7,<1.0.0",
+    "click>=2.4,<2.5",
+    "pyzmq==14.3.1,<14.4.0",
     "redis>=2.10.1,<2.11.0",
 ]
 
