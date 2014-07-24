@@ -13,6 +13,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from blinker import signal
 
 import redis
+import zmq
 
 
 def print_sub(tables):
@@ -225,13 +226,33 @@ def es_sub(redis_dsn, tables, namespace=None):
     signal("session_rollback").connect(session_rollback_hook, weak=False)
 
 
+def zmq_sub(bind, tables):
+    """0mq fanout subscriber.
+
+    This subscriber will use zeromq to publish the event to outside.
+    """
+    logger = logging.getLogger("meepo.sub.nano_sub")
+
+    ctx = zmq.Context()
+    pub_socket = ctx.socket(zmq.PUB)
+    pub_socket.bind(bind)
+
+    def _sub(table):
+        for action in ("write", "update", "delete"):
+            def _sub(pk, action=action):
+                msg = "%s_%s %s" % (table, action, pk)
+                pub_socket.send_string(msg)
+                logger.debug("pub msg: %s" % msg)
+            signal("%s_%s" % (table, action)).connect(_sub, weak=False)
+
+    for table in set(tables):
+        _sub(table)
+
+
 def nano_sub(bind, tables):
-    """Nanomsg fanout subscriber.
+    """Nanomsg fanout subscriber. (Experimental)
 
     This subscriber will use nanomsg to publish the event to outside.
-
-    TODO: The pub_socket here will not close due to the sub pattern here.
-    Need to figure out a way to close it later.
     """
     logger = logging.getLogger("meepo.sub.nano_sub")
 
