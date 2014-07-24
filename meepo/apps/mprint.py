@@ -16,7 +16,7 @@ from meepo.logutils import setup_logger
 
 
 @click.command()
-@click.option('-d', '--mysql_dsn')
+@click.option('-m', '--mysql_dsn')
 @click.argument('tables', nargs=-1)
 def main(mysql_dsn, tables):
     setup_logger('DEBUG')
