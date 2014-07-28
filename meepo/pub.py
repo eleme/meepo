@@ -6,7 +6,10 @@ import logging
 import random
 import uuid
 
-from urllib.parse import urlparse
+try:
+    from urllib.parse import urlparse
+except ImportError:
+    from urlparse import urlparse
 
 from blinker import signal
 
