@@ -51,13 +51,13 @@ def mysql_pub(mysql_dsn, tables=None, blocking=True, server_id=None, **kwargs):
         return tuple(values[k] for k in event.primary_key)
 
     for event in stream:
+        if tables and event.table not in tables:
+            continue
+
         try:
             rows = event.rows
         except (UnicodeDecodeError, ValueError) as e:
             logger.exception(e)
-            continue
-
-        if tables and event.table not in tables:
             continue
 
         timestamp = datetime.datetime.fromtimestamp(event.timestamp)
