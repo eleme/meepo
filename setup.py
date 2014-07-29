@@ -9,6 +9,7 @@ cmds = [
     "mnano = meepo.apps.mnano:main",
     "mprint = meepo.apps.mprint:main",
     "mreplicate = meepo.apps.mreplicate:main",
+    "mzdevice = meepo.apps.mzdevice:main",
     "mzmq = meepo.apps.mzmq:main",
 ]
 

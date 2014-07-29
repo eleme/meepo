@@ -226,7 +226,7 @@ def es_sub(redis_dsn, tables, namespace=None):
     signal("session_rollback").connect(session_rollback_hook, weak=False)
 
 
-def zmq_sub(bind, tables):
+def zmq_sub(bind, tables, forwarder=False):
     """0mq fanout subscriber.
 
     This subscriber will use zeromq to publish the event to outside.
@@ -235,7 +235,11 @@ def zmq_sub(bind, tables):
 
     ctx = zmq.Context()
     pub_socket = ctx.socket(zmq.PUB)
-    pub_socket.bind(bind)
+
+    if forwarder:
+        pub_socket.connect(bind)
+    else:
+        pub_socket.bind(bind)
 
     def _sub(table):
         for action in ("write", "update", "delete"):
