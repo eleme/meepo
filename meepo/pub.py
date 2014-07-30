@@ -159,9 +159,9 @@ def sqlalchemy_pub(dbsession, strict_tables=None):
         for obj in session.pending_delete:
             _pub(obj, action="delete")
 
-        del session.pending_write
-        del session.pending_update
-        del session.pending_delete
+        session.pending_write.clear()
+        session.pending_update.clear()
+        session.pending_delete.clear()
 
     if not strict_tables:
         def after_commit_hook(session):
