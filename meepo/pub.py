@@ -213,7 +213,9 @@ def sqlalchemy_pub(dbsession, strict_tables=None):
         def session_rollback(session):
             """Unprepare session in after_rollback.
             """
-            assert hasattr(session, 'meepo_unique_id')
+            if not hasattr(session, 'meepo_unique_id'):
+                return
+
             logger.debug("session_rollback: {}".format(
                 session.meepo_unique_id))
             signal("session_rollback").send(session.meepo_unique_id)
