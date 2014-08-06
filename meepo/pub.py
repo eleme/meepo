@@ -135,23 +135,24 @@ def sqlalchemy_pub(dbsession, strict_tables=None):
             logger.debug("{} -> {}".format(sg_name, pk))
             sg.send(pk)
 
-    def after_begin_hook(session, transaction, connection):
-        """Init pending sets
-        """
-        session.pending_write = set()
-        session.pending_update = set()
-        session.pending_delete = set()
-    event.listen(dbsession, "after_begin", after_begin_hook)
+    def _init_session(session):
+        for action in ("write", "update", "delete"):
+            attr = "pending_{}".format(action)
+            if not hasattr(session, attr):
+                setattr(session, attr, set())
 
     def after_flush_hook(session, flush_ctx):
         """Record session changes on flush
         """
+        _init_session(session)
         session.pending_write |= set(session.new)
         session.pending_update |= set(session.dirty)
         session.pending_delete |= set(session.deleted)
     event.listen(dbsession, "after_flush", after_flush_hook)
 
     def _pub_session(session):
+        _init_session(session)
+
         for obj in session.pending_write:
             _pub(obj, action="write")
         for obj in session.pending_update:
@@ -181,6 +182,7 @@ def sqlalchemy_pub(dbsession, strict_tables=None):
             """Record session prepare state in before_commit
             """
             assert not hasattr(session, 'meepo_unique_id')
+            _init_session(session)
             session.meepo_unique_id = uuid.uuid4().hex
             for action in ("write", "update", "delete"):
                 objs = [o for o in getattr(session, "pending_%s" % action)
