@@ -1,6 +1,15 @@
 Meepo Changelog
 ===============
 
+Version 0.1.1
+-------------
+
+Released on August 7, 2014.
+
+- add meepo replicator base class.
+- bug fix for sqlalchemy_pub
+
+
 Version 0.1.0
 -------------
 
