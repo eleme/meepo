@@ -15,12 +15,6 @@ import zmq
 from zmq.utils.strtypes import asbytes
 
 
-def replicate(topic, pk_queue, callback):
-    while True:
-        pk = pk_queue.get()
-        callback(topic, pk)
-
-
 class Worker(Process):
     def __init__(self, queue, cb):
         super(Worker, self).__init__()
@@ -47,16 +41,17 @@ class ZmqReplicator(object):
         self._ctx = zmq.Context()
         self.socket = self._ctx.socket(zmq.SUB)
 
-    def event(self, topic):
+    def event(self, *topics):
         """Topic callback registry.
 
         callback func should receive two args: topic and pk, and then process
         the replication job.
         """
         def wrapper(func):
-            self.worker_queues[topic] = Queue()
-            self.workers[topic] = Worker(self.worker_queues[topic], func)
-            self.socket.setsockopt(zmq.SUBSCRIBE, asbytes(topic))
+            for topic in topics:
+                self.worker_queues[topic] = Queue()
+                self.workers[topic] = Worker(self.worker_queues[topic], func)
+                self.socket.setsockopt(zmq.SUBSCRIBE, asbytes(topic))
             return func
         return wrapper
 
