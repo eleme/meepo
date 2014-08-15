@@ -1,6 +1,14 @@
 Meepo Changelog
 ===============
 
+Version 0.1.2
+-------------
+
+Released on August 15, 2014.
+
+- allow multiple topics in registered callback.
+
+
 Version 0.1.1
 -------------
 
