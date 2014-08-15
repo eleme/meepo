@@ -16,10 +16,10 @@ cmds = [
 
 # requirements
 install_requires = [
-    "SQLAlchemy>=0.9.7,<1.0.0",
+    "SQLAlchemy>=0.9.0,<1.0.0",
     "blinker>=1.3,<2.0",
     "click>=2.4,<2.5",
-    "pyzmq==14.3.1,<14.4.0",
+    "pyzmq>=14.3.1,<14.4.0",
     "redis>=2.10.1,<2.11.0",
 ]
 
