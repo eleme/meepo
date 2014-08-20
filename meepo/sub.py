@@ -154,7 +154,13 @@ def es_sub(redis_dsn, tables, namespace=None):
     and ignore how many times it happens.
     """
     logger = logging.getLogger("meepo.sub.es_sub")
-    namespace = namespace or "meepo:es_sub"
+
+    # we may accept function as namespace so we could dynamically generate it.
+    # if namespace provided as string, the function return the string.
+    # elif namespace not provided, generate namespace dynamically by today.
+    if not callable(namespace):
+        namespace = lambda: namespace or \
+            "meepo:es:{}".format(datetime.date.today())
 
     r = redis.StrictRedis.from_url(redis_dsn)
 
@@ -177,7 +183,7 @@ def es_sub(redis_dsn, tables, namespace=None):
 
     for table in set(tables):
         def _sub(action, pk, table=table):
-            key = "%s:%s_%s" % (namespace, table, action)
+            key = "%s:%s_%s" % (namespace(), table, action)
             time = r_time()
             if r_zadd(keys=[key], args=[time, str(pk)]):
                 logger.info("%s_%s: %s -> %s" % (
@@ -196,8 +202,8 @@ def es_sub(redis_dsn, tables, namespace=None):
     # session hooks for strict prepare-commit pattern
 
     def _clean_sid(sid):
-        sp_all = "%s:session_prepare" % namespace
-        sp_key = "%s:session_prepare:%s" % (namespace, sid)
+        sp_all = "%s:session_prepare" % namespace()
+        sp_key = "%s:session_prepare:%s" % (namespace(), sid)
         with r.pipeline() as p:
             p.srem(sp_all, sid)
             p.expire(sp_key, 60 * 60)
@@ -207,8 +213,8 @@ def es_sub(redis_dsn, tables, namespace=None):
         """
         logger.info("session_prepare %s -> %s" % (action, sid))
 
-        sp_all = "%s:session_prepare" % namespace
-        sp_key = "%s:session_prepare:%s" % (namespace, sid)
+        sp_all = "%s:session_prepare" % namespace()
+        sp_key = "%s:session_prepare:%s" % (namespace(), sid)
 
         with r.pipeline() as p:
             p.sadd(sp_all, sid)
