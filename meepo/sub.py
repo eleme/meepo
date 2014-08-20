@@ -144,7 +144,7 @@ def replicate_sub(master_dsn, slave_dsn, tables=None):
         _sub(table)
 
 
-def es_sub(redis_dsn, tables, namespace=None):
+def es_sub(redis_dsn, tables, namespace=None, ttl=3600*24*3):
     """EventSourcing subscriber.
 
     This subscriber will use redis as event sourcing storage layer.
@@ -164,6 +164,11 @@ def es_sub(redis_dsn, tables, namespace=None):
 
     r = redis.StrictRedis.from_url(redis_dsn)
 
+    if ttl:
+        lua_ttl = "redis.call('EXPIRE', KEYS[1], {ttl})".format(ttl=ttl)
+    else:
+        lua_ttl = ""
+
     LUA_TIME = """
     local time = redis.call('TIME')
     return tonumber(time[1])
@@ -174,9 +179,10 @@ def es_sub(redis_dsn, tables, namespace=None):
         return 0
     else
         redis.call('ZADD', KEYS[1], ARGV[1], ARGV[2])
+        {0}
         return 1
     end
-    """
+    """.format(lua_ttl)
 
     r_time = r.register_script(LUA_TIME)
     r_zadd = r.register_script(LUA_ZADD)
