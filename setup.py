@@ -40,7 +40,7 @@ dev_requires = [
 
 
 setup(name="meepo",
-      version="0.1.2",
+      version="0.1.3",
       description="event sourcing for databases.",
       keywords="eventsourcing event sourcing replication cache elasticsearch",
       author="Lx Yu",

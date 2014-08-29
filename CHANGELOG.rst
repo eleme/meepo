@@ -1,6 +1,15 @@
 Meepo Changelog
 ===============
 
+Version 0.1.3
+-------------
+
+Released on August 29, 2014.
+
+- auto expire for eventsourcing sub keys.
+- allow callable as namespace.
+
+
 Version 0.1.2
 -------------
 
