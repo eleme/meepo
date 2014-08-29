@@ -159,7 +159,7 @@ def es_sub(redis_dsn, tables, namespace=None, ttl=3600*24*3):
     # if namespace provided as string, the function return the string.
     # elif namespace not provided, generate namespace dynamically by today.
     if not callable(namespace):
-        namespace = lambda: namespace or \
+        namespace = lambda: namespace if namespace else \
             "meepo:es:{}".format(datetime.date.today())
 
     r = redis.StrictRedis.from_url(redis_dsn)
