@@ -5,9 +5,6 @@ Meepo
 .. image:: http://img.shields.io/travis/eleme/meepo/master.svg?style=flat
    :target: https://travis-ci.org/eleme/meepo
 
-.. image:: http://img.shields.io/github/release/eleme/meepo.svg?style=flat
-   :target: https://github.com/eleme/meepo/releases
-
 .. image:: http://img.shields.io/pypi/v/meepo.svg?style=flat
    :target: https://pypi.python.org/pypi/meepo
 
