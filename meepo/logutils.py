@@ -31,7 +31,8 @@ def setup_logger(level=None):
 
         'formatters': {
             'console': {
-                'format': '%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+                'format': '%(asctime)s [%(levelname)s] [%(name)s][%(process)d]'
+                          ': %(message)s',
             },
         }
     })
