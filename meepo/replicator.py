@@ -28,7 +28,8 @@ class Worker(Process):
 
     def run(self):
         for pk in iter(self.queue.get, None):
-            self.logger.info("{0} -> {1}".format(self.name, pk))
+            self.logger.info("{0} -> {1} - qsize: {2}".format(
+                self.name, pk, self.queue.qsize()))
             self.cb(pk)
 
 
