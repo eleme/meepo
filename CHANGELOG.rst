@@ -1,6 +1,15 @@
 Meepo Changelog
 ===============
 
+Version 0.1.4
+-------------
+
+Released on September 2, 2014.
+
+- now print queue size in logging message
+- allow multiple workers (consisten hash on pk) for event
+
+
 Version 0.1.3
 -------------
 
