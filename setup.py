@@ -34,6 +34,7 @@ nanomsg_requires = [
 
 dev_requires = [
     "flake8>=2.2.1",
+    "pytest>=2.6.1",
     "sphinx-rtd-theme>=0.1.6",
     "sphinx>=1.2.2",
 ] + mysqlbinlog_requires

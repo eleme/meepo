@@ -2,6 +2,9 @@
 
 *.py[cod]
 
+# test json conf
+tests/conf.json
+
 # C extensions
 *.so
 
