@@ -21,11 +21,12 @@ from meepo.logutils import setup_logger
 
 
 @click.command()
+@click.option("-b", "--blocking", is_flag=True)
 @click.option('-m', '--master_dsn')
 @click.option('-r', '--redis_dsn')
 @click.option('--namespace')
 @click.argument('tables', nargs=-1)
-def main(master_dsn, redis_dsn, tables, namespace=None):
+def main(master_dsn, redis_dsn, tables, namespace=None, blocking=False):
     setup_logger()
 
     logger = logging.getLogger(__name__)
@@ -36,4 +37,4 @@ def main(master_dsn, redis_dsn, tables, namespace=None):
 
     logger.info("event sourcing tables: %s" % ", ".join(tables))
     es_sub(redis_dsn, tables, namespace)
-    mysql_pub(master_dsn)
+    mysql_pub(master_dsn, blocking=blocking)

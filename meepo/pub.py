@@ -13,7 +13,7 @@ from blinker import signal
 from ._compat import urlparse
 
 
-def mysql_pub(mysql_dsn, tables=None, blocking=True, server_id=None, **kwargs):
+def mysql_pub(mysql_dsn, tables=None, blocking=False, **kwargs):
     """MySQL row-based binlog events publisher.
 
     The additional kwargs will be passed to `BinLogStreamReader`.
@@ -36,7 +36,7 @@ def mysql_pub(mysql_dsn, tables=None, blocking=True, server_id=None, **kwargs):
         "user": parsed.username,
         "passwd": parsed.password
     }
-    server_id = server_id or random.randint(1000000000, 4294967295)
+    server_id = random.randint(1000000000, 4294967295)
 
     # connect to binlog stream
     stream = pymysqlreplication.BinLogStreamReader(

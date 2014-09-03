@@ -24,10 +24,11 @@ from meepo.sub import replicate_sub
 
 
 @click.command()
+@click.option("-b", "--blocking", is_flag=True)
 @click.option('-m', '--master_dsn')
 @click.option('-s', '--slave_dsn')
 @click.argument('tables', nargs=-1)
-def main(master_dsn, slave_dsn, tables):
+def main(master_dsn, slave_dsn, tables, blocking=False):
     # currently only supports mysql master
     assert master_dsn.startswith("mysql")
 
@@ -37,4 +38,4 @@ def main(master_dsn, slave_dsn, tables):
         tables = None
 
     replicate_sub(master_dsn, slave_dsn, tables)
-    mysql_pub(master_dsn)
+    mysql_pub(master_dsn, blocking=blocking)

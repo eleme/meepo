@@ -33,10 +33,11 @@ from meepo.logutils import setup_logger
 
 
 @click.command()
+@click.option("-b", "--blocking", is_flag=True)
 @click.option('-m', '--master_dsn')
 @click.option('-b', '--bind')
 @click.argument('tables', nargs=-1)
-def main(master_dsn, bind, tables):
+def main(master_dsn, bind, tables, blocking=False):
     setup_logger("INFO")
 
     logger = logging.getLogger(__name__)
@@ -47,4 +48,4 @@ def main(master_dsn, bind, tables):
 
     logger.info("event sourcing tables: %s" % ", ".join(tables))
     nano_sub(bind, tables)
-    mysql_pub(master_dsn)
+    mysql_pub(master_dsn, blocking=blocking)
