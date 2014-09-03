@@ -1,17 +1,16 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import absolute_import
+
 import collections
 import datetime
 import logging
 import random
 import uuid
 
-try:
-    from urllib.parse import urlparse
-except ImportError:
-    from urlparse import urlparse
-
 from blinker import signal
+
+from ._compat import urlparse
 
 
 def mysql_pub(mysql_dsn, tables=None, blocking=True, server_id=None, **kwargs):
