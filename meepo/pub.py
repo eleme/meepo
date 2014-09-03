@@ -52,6 +52,9 @@ def mysql_pub(mysql_dsn, tables=None, blocking=False, **kwargs):
         return tuple(values[k] for k in event.primary_key)
 
     for event in stream:
+        if not event.primary_key:
+            continue
+
         if tables and event.table not in tables:
             continue
 
