@@ -36,13 +36,12 @@ def mysql_pub(mysql_dsn, tables=None, blocking=False, **kwargs):
         "user": parsed.username,
         "passwd": parsed.password
     }
-    server_id = random.randint(1000000000, 4294967295)
 
     # connect to binlog stream
     stream = pymysqlreplication.BinLogStreamReader(
-        connection_settings=mysql_settings,
+        mysql_settings,
+        server_id=random.randint(1000000000, 4294967295),
         blocking=blocking,
-        server_id=server_id,
         only_events=[DeleteRowsEvent, UpdateRowsEvent, WriteRowsEvent],
         **kwargs
     )
