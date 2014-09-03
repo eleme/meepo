@@ -10,7 +10,7 @@ import uuid
 
 from blinker import signal
 
-from ._compat import urlparse
+from ._compat import urlparse, text_types
 
 
 def mysql_pub(mysql_dsn, tables=None, blocking=False, **kwargs):
@@ -47,7 +47,7 @@ def mysql_pub(mysql_dsn, tables=None, blocking=False, **kwargs):
     )
 
     def _pk(values):
-        if isinstance(event.primary_key, str):
+        if isinstance(event.primary_key, text_types):
             return values[event.primary_key]
         return tuple(values[k] for k in event.primary_key)
 
