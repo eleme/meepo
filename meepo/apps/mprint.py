@@ -24,4 +24,6 @@ def main(mysql_dsn, tables, blocking=False, debug=False):
     level = "DEBUG" if debug else "INFO"
     setup_logger(level)
     print_sub(tables)
-    mysql_pub(mysql_dsn, blocking=blocking)
+
+    pub_tables = tables if tables else None
+    mysql_pub(mysql_dsn, tables=pub_tables, blocking=blocking)
