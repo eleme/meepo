@@ -10,13 +10,16 @@ from meepo._compat import urlparse
 
 def test_mysql_pub(mysql_dsn):
     test_write_sig, test_update_sig, test_delete_sig = [], [], []
+    test_binlog_sig = []
 
-    signal("test_write").connect(
-        lambda pk: test_write_sig.append(pk), weak=False)
-    signal("test_update").connect(
-        lambda pk: test_update_sig.append(pk), weak=False)
-    signal("test_delete").connect(
-        lambda pk: test_delete_sig.append(pk), weak=False)
+    signal("test_write").connect(lambda pk: test_write_sig.append(pk),
+                                 weak=False)
+    signal("test_update").connect(lambda pk: test_update_sig.append(pk),
+                                  weak=False)
+    signal("test_delete").connect(lambda pk: test_delete_sig.append(pk),
+                                  weak=False)
+    signal("mysql_binlog_pos").connect(lambda pk: test_binlog_sig.append(pk),
+                                       weak=False)
 
     parsed = urlparse(mysql_dsn)
     db_settings = {
@@ -50,3 +53,4 @@ def test_mysql_pub(mysql_dsn):
     assert test_write_sig == [1, 2, 3, 4]
     assert test_update_sig == [1, 2, 2, 3, 4]
     assert test_delete_sig == [2, 3, 4, 1]
+    assert len(test_binlog_sig) == 7
