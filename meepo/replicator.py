@@ -41,7 +41,7 @@ class ZmqReplicator(object):
     Trigger retrive, process, store steps to do replication.
     """
 
-    def __init__(self, listen, name="meepo.replicator.zmq"):
+    def __init__(self, listen=None, name="meepo.replicator.zmq"):
         self.listen = listen
         self.workers = {}
         self.worker_queues = {}
@@ -53,6 +53,9 @@ class ZmqReplicator(object):
         # init zmq socket
         self._ctx = zmq.Context()
         self.socket = self._ctx.socket(zmq.SUB)
+
+    def set_forwarder(self, forwarder):
+        self.listen = forwarder
 
     def event(self, *topics, **kwargs):
         """Topic callback registry.
