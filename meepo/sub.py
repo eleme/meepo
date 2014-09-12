@@ -164,7 +164,7 @@ def es_sub(redis_dsn, tables, namespace=None, ttl=3600*24*3):
         namespace = lambda: namespace if namespace else \
             "meepo:es:{}".format(datetime.date.today())
 
-    r = redis.StrictRedis.from_url(redis_dsn)
+    r = redis.StrictRedis.from_url(redis_dsn, socket_timeout=1)
 
     if ttl:
         lua_ttl = "redis.call('EXPIRE', KEYS[1], {ttl})".format(ttl=ttl)
@@ -192,13 +192,16 @@ def es_sub(redis_dsn, tables, namespace=None, ttl=3600*24*3):
     for table in set(tables):
         def _sub(action, pk, table=table):
             key = "%s:%s_%s" % (namespace(), table, action)
-            time = r_time()
-            if r_zadd(keys=[key], args=[time, str(pk)]):
-                logger.info("%s_%s: %s -> %s" % (
-                    table, action, pk,
-                    datetime.datetime.fromtimestamp(time)))
-            else:
-                logger.info("%s_%s: %s -> skip" % (table, action, pk))
+            try:
+                time = r_time()
+                if r_zadd(keys=[key], args=[time, str(pk)]):
+                    logger.info("%s_%s: %s -> %s" % (
+                        table, action, pk,
+                        datetime.datetime.fromtimestamp(time)))
+                else:
+                    logger.info("%s_%s: %s -> skip" % (table, action, pk))
+            except redis.ConnectionError:
+                logger.error("event sourcing failed: %s" % pk)
 
         signal("%s_write" % table).connect(
             functools.partial(_sub, "write"), weak=False)
@@ -207,15 +210,17 @@ def es_sub(redis_dsn, tables, namespace=None, ttl=3600*24*3):
         signal("%s_delete" % table).connect(
             functools.partial(_sub, "delete"), weak=False)
 
-    # session hooks for strict prepare-commit pattern
-
     def _clean_sid(sid):
         sp_all = "%s:session_prepare" % namespace()
         sp_key = "%s:session_prepare:%s" % (namespace(), sid)
-        with r.pipeline() as p:
-            p.srem(sp_all, sid)
-            p.expire(sp_key, 60 * 60)
+        try:
+            with r.pipeline() as p:
+                p.srem(sp_all, sid)
+                p.expire(sp_key, 60 * 60)
+        except redis.ConnectionError:
+            logger.error("session clean failed: %s" % sid)
 
+    # session hooks for strict prepare-commit pattern
     def session_prepare_hook(event, sid, action):
         """Record session prepare state.
         """
@@ -224,9 +229,12 @@ def es_sub(redis_dsn, tables, namespace=None, ttl=3600*24*3):
         sp_all = "%s:session_prepare" % namespace()
         sp_key = "%s:session_prepare:%s" % (namespace(), sid)
 
-        with r.pipeline() as p:
-            p.sadd(sp_all, sid)
-            p.hset(sp_key, action, pickle.dumps(event))
+        try:
+            with r.pipeline() as p:
+                p.sadd(sp_all, sid)
+                p.hset(sp_key, action, pickle.dumps(event))
+        except redis.ConnectionError:
+            logger.error("session prepare failed: %s" % sid)
     signal("session_prepare").connect(session_prepare_hook, weak=False)
 
     def session_commit_hook(sid):
