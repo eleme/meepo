@@ -1,6 +1,17 @@
 Meepo Changelog
 ===============
 
+Version 0.1.5
+-------------
+
+Released on September 12, 2014.
+
+- upgrade mysql-replication version to latest.
+- graceful bypass event sourcing when redis fail.
+- skip mysql row event if no primary_key found.
+- tests, some bugfixes and tunings.
+
+
 Version 0.1.4
 -------------
 
