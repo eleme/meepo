@@ -217,6 +217,7 @@ def es_sub(redis_dsn, tables, namespace=None, ttl=3600*24*3):
             with r.pipeline() as p:
                 p.srem(sp_all, sid)
                 p.expire(sp_key, 60 * 60)
+                p.execute()
         except redis.ConnectionError:
             logger.error("session clean failed: %s" % sid)
 
@@ -224,8 +225,6 @@ def es_sub(redis_dsn, tables, namespace=None, ttl=3600*24*3):
     def session_prepare_hook(event, sid, action):
         """Record session prepare state.
         """
-        logger.info("session_prepare %s -> %s" % (action, sid))
-
         sp_all = "%s:session_prepare" % namespace()
         sp_key = "%s:session_prepare:%s" % (namespace(), sid)
 
@@ -233,18 +232,20 @@ def es_sub(redis_dsn, tables, namespace=None, ttl=3600*24*3):
             with r.pipeline() as p:
                 p.sadd(sp_all, sid)
                 p.hset(sp_key, action, pickle.dumps(event))
+                p.execute()
+            logger.info("session_prepare %s -> %s" % (action, sid))
         except redis.ConnectionError:
             logger.error("session prepare failed: %s" % sid)
     signal("session_prepare").connect(session_prepare_hook, weak=False)
 
     def session_commit_hook(sid):
-        logger.info("session_commit -> %s" % sid)
         _clean_sid(sid)
+        logger.info("session_commit -> %s" % sid)
     signal("session_commit").connect(session_commit_hook, weak=False)
 
     def session_rollback_hook(sid):
-        logger.info("session_rollback -> %s" % sid)
         _clean_sid(sid)
+        logger.info("session_rollback -> %s" % sid)
     signal("session_rollback").connect(session_rollback_hook, weak=False)
 
 
