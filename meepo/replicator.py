@@ -29,10 +29,13 @@ class Worker(Process):
             self.logger = logging.getLogger(logger_name)
 
     def run(self):
-        for pk in iter(self.queue.get, None):
-            self.logger.info("{0} -> {1} - qsize: {2}".format(
-                self.name, pk, self.queue.qsize()))
-            self.cb(pk)
+        try:
+            for pk in iter(self.queue.get, None):
+                self.logger.info("{0} -> {1} - qsize: {2}".format(
+                    self.name, pk, self.queue.qsize()))
+                self.cb(pk)
+        except KeyboardInterrupt:
+            self.logger.info("KeyboardInterrupt stop %s" % self.name)
 
 
 class ZmqReplicator(object):
