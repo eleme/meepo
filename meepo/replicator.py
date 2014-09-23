@@ -10,6 +10,8 @@
 """
 
 import logging
+import time
+
 from multiprocessing import Process, Queue
 
 import zmq
@@ -19,6 +21,8 @@ from .utils import ConsistentHashRing
 
 
 class Worker(Process):
+    MAX_INTERVAL = 60
+
     def __init__(self, name, queue, cb, logger_name=None):
         super(Worker, self).__init__()
         self.name = name
@@ -28,14 +32,25 @@ class Worker(Process):
         if logger_name:
             self.logger = logging.getLogger(logger_name)
 
+        self._interval = 1
+
     def run(self):
         try:
             for pk in iter(self.queue.get, None):
                 self.logger.info("{0} -> {1} - qsize: {2}".format(
                     self.name, pk, self.queue.qsize()))
-                self.cb(pk)
+
+                if not self.cb(pk):
+                    self.queue.put(pk)
+                    self._sleep()
+                else:
+                    self._interval = 1
         except KeyboardInterrupt:
             self.logger.info("KeyboardInterrupt stop %s" % self.name)
+
+    def _sleep(self):
+        time.sleep(self._interval)
+        self._interval = min(self._interval + 2, self.MAX_INTERVAL)
 
 
 class ZmqReplicator(object):
