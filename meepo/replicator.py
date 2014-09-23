@@ -21,18 +21,21 @@ from .utils import ConsistentHashRing
 
 
 class Worker(Process):
-    MAX_INTERVAL = 60
-
-    def __init__(self, name, queue, cb, logger_name=None):
+    def __init__(self, name, queue, cb, logger_name=None,
+                 max_retry_count=10, max_retry_interval=60):
         super(Worker, self).__init__()
         self.name = name
         self.queue = queue
         self.cb = cb
 
-        if logger_name:
-            self.logger = logging.getLogger(logger_name)
+        # config logger
+        logger_name = logger_name or "name-%s" % id(self)
+        self.logger = logging.getLogger(logger_name)
 
-        self._interval = 1
+        # config retry
+        self._max_retry_interval = max_retry_interval
+        self._max_retry_count = max_retry_count
+        self._retry_stats = {}
 
     def run(self):
         try:
@@ -41,16 +44,33 @@ class Worker(Process):
                     self.name, pk, self.queue.qsize()))
 
                 if not self.cb(pk):
-                    self.queue.put(pk)
-                    self._sleep()
+                    self.on_fail(pk)
                 else:
-                    self._interval = 1
+                    self.on_success(pk)
+
         except KeyboardInterrupt:
             self.logger.info("KeyboardInterrupt stop %s" % self.name)
 
-    def _sleep(self):
-        time.sleep(self._interval)
-        self._interval = min(self._interval + 2, self.MAX_INTERVAL)
+    def on_fail(self, pk):
+        if pk not in self._retry_stats:
+            self._retry_stats[pk] = 0
+
+        if self._retry_stats[pk] > self._max_retry_count:
+            self.logger.error("callback on pk failed -> %s" % pk)
+            del self._retry_stats[pk]
+            return
+
+        # sleep on fail
+        time.sleep(min(2 ** self._retry_stats[pk], self._max_retry_interval))
+
+        self._retry_stats[pk] += 1
+        self.queue.put(pk)
+        self.logger.warn("callback on pk failed for %s times -> %s" % (
+            self._retry_stats[pk], pk))
+
+    def on_success(self, pk):
+        if pk in self._retry_stats:
+            del self._retry_stats[pk]
 
 
 class ZmqReplicator(object):
