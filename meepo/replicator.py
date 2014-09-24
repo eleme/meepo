@@ -9,6 +9,7 @@
     Replicate from database to targets.
 """
 
+import collections
 import logging
 import time
 
@@ -21,12 +22,22 @@ from .utils import ConsistentHashRing
 
 
 class Worker(Process):
-    def __init__(self, name, queue, cb, logger_name=None,
-                 max_retry_count=10, max_retry_interval=60):
+    MAX_PK_COUNT = 1024
+
+    def __init__(self, name, queue, cb, multi=False, logger_name=None,
+                 retry=True, max_retry_count=10, max_retry_interval=60):
+        """kwargs:
+        multi: allow multiple pks to be sent in one callback.
+        retry: retry on pk if callback failed.
+        max_retry_count: max retry count for a single pk.
+        max_retry_interval: max sleep time when callback failed.
+        """
         super(Worker, self).__init__()
         self.name = name
         self.queue = queue
         self.cb = cb
+        self.multi = multi
+        self.retry = retry
 
         # config logger
         logger_name = logger_name or "name-%s" % id(self)
@@ -35,42 +46,65 @@ class Worker(Process):
         # config retry
         self._max_retry_interval = max_retry_interval
         self._max_retry_count = max_retry_count
-        self._retry_stats = {}
+        self._retry_stats = collections.Counter()
 
     def run(self):
         try:
-            for pk in iter(self.queue.get, None):
-                self.logger.info("{0} -> {1} - qsize: {2}".format(
-                    self.name, pk, self.queue.qsize()))
+            while True:
+                pks = []
 
-                if not self.cb(pk):
-                    self.on_fail(pk)
+                # try get all pks from queue at once
+                while not self.queue.empty():
+                    pks.append(self.queue.get())
+                    if len(pks) > self.MAX_PK_COUNT:
+                        break
+
+                # take a nap if queue is empty
+                if not pks:
+                    time.sleep(1)
+                    continue
+
+                self.logger.info("{0} -> {1} - qsize: {2}".format(
+                    self.name, pks, self.queue.qsize()))
+
+                if self.multi:
+                    results = self.cb(pks)
                 else:
-                    self.on_success(pk)
+                    results = [self.cb(pk) for pk in pks]
+
+                if not self.retry:
+                    continue
+
+                # check failed task and retry
+                for pk, r in zip(pks, results):
+                    if r:
+                        self.on_success(pk)
+                    else:
+                        self.on_fail(pk)
+
+                # take a nap on fail
+                if not all(results):
+                    time.sleep(min(3 * sum(results), self._max_retry_interval))
 
         except KeyboardInterrupt:
             self.logger.info("KeyboardInterrupt stop %s" % self.name)
 
     def on_fail(self, pk):
-        if pk not in self._retry_stats:
-            self._retry_stats[pk] = 0
-
-        if self._retry_stats[pk] > self._max_retry_count:
-            self.logger.error("callback on pk failed -> %s" % pk)
-            del self._retry_stats[pk]
-            return
-
-        # sleep on fail
-        time.sleep(min(2 ** self._retry_stats[pk], self._max_retry_interval))
-
         self._retry_stats[pk] += 1
-        self.queue.put(pk)
-        self.logger.warn("callback on pk failed for %s times -> %s" % (
-            self._retry_stats[pk], pk))
+        if self._retry_stats[pk] > self._max_retry_count:
+            del self._retry_stats[pk]
+            self.logger.error("callback on pk failed -> %s" % pk)
+        else:
+            # put failed pk back to queue
+            self.queue.put(pk)
+            self.logger.warn(
+                "callback on pk failed for %s times -> %s" % (
+                    self._retry_stats[pk], pk))
 
     def on_success(self, pk):
         if pk in self._retry_stats:
             del self._retry_stats[pk]
+        self.queue.task_done()
 
 
 class ZmqReplicator(object):
@@ -99,6 +133,7 @@ class ZmqReplicator(object):
         the replication job.
         """
         workers = kwargs.pop("workers", 1)
+        multi = kwargs.pop("multi", False)
 
         def wrapper(func):
             for topic in topics:
@@ -107,8 +142,9 @@ class ZmqReplicator(object):
                 for q in queues:
                     hash_ring[hash(q)] = q
                 self.worker_queues[topic] = hash_ring
-                self.workers[topic] = [Worker(
-                    topic, q, func, logger_name=self.name) for q in queues]
+                self.workers[topic] = [
+                    Worker(topic, q, func, multi=multi, logger_name=self.name)
+                    for q in queues]
                 self.socket.setsockopt(zmq.SUBSCRIBE, asbytes(topic))
             return func
         return wrapper
@@ -125,6 +161,15 @@ class ZmqReplicator(object):
         self.socket.connect(self.listen)
         while True:
             msg = self.socket.recv_string()
-            topic, pk = msg.split()
-            self.logger.debug("replicator: {0} -> {1}".format(topic, pk))
-            self.worker_queues[topic][hash(pk)].put(pk)
+            lst = msg.split()
+            if len(lst) == 2:
+                topic, pks = lst
+            elif len(lst) > 2:
+                topic, pks = lst[0], lst[1:]
+            else:
+                self.logger.error("msg corrupt -> %s" % msg)
+                return
+
+            self.logger.debug("replicator: {0} -> {1}".format(topic, pks))
+            for pk in pks:
+                self.worker_queues[topic][hash(pk)].put(pk)
