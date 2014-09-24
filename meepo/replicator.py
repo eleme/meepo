@@ -22,7 +22,7 @@ from .utils import ConsistentHashRing
 
 
 class Worker(Process):
-    MAX_PK_COUNT = 1024
+    MAX_PK_COUNT = 256
 
     def __init__(self, name, queue, cb, multi=False, logger_name=None,
                  retry=True, max_retry_count=10, max_retry_interval=60):
@@ -104,7 +104,6 @@ class Worker(Process):
     def on_success(self, pk):
         if pk in self._retry_stats:
             del self._retry_stats[pk]
-        self.queue.task_done()
 
 
 class ZmqReplicator(object):
@@ -163,7 +162,7 @@ class ZmqReplicator(object):
             msg = self.socket.recv_string()
             lst = msg.split()
             if len(lst) == 2:
-                topic, pks = lst
+                topic, pks = lst[0], [lst[1], ]
             elif len(lst) > 2:
                 topic, pks = lst[0], lst[1:]
             else:
