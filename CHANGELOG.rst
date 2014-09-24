@@ -1,6 +1,16 @@
 Meepo Changelog
 ===============
 
+Version 0.1.6
+-------------
+
+Released on September 23, 2014.
+
+- graceful handle KeyboardInterrupt.
+- better worker retry handling.
+- allow multiple pks to be sent to callback task.
+
+
 Version 0.1.5
 -------------
 
