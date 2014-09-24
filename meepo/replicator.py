@@ -87,7 +87,7 @@ class Worker(Process):
                     time.sleep(min(3 * sum(results), self._max_retry_interval))
 
         except KeyboardInterrupt:
-            self.logger.info("KeyboardInterrupt stop %s" % self.name)
+            self.logger.debug("KeyboardInterrupt stop %s" % self.name)
 
     def on_fail(self, pk):
         self._retry_stats[pk] += 1
