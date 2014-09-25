@@ -145,7 +145,8 @@ class ZmqReplicator(object):
                     hash_ring[hash(q)] = q
                 self.worker_queues[topic] = hash_ring
                 self.workers[topic] = [
-                    Worker(topic, q, func, multi=multi, logger_name=self.name)
+                    Worker(topic, q, func, multi=multi,
+                           logger_name="%s.%s" % (self.name, topic))
                     for q in queues]
                 self.socket.setsockopt(zmq.SUBSCRIBE, asbytes(topic))
             return func
