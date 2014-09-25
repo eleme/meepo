@@ -51,11 +51,11 @@ class Worker(Process):
     def run(self):
         try:
             while True:
-                pks = []
+                pks = set()
 
                 # try get all pks from queue at once
                 while not self.queue.empty():
-                    pks.append(self.queue.get())
+                    pks.add(self.queue.get())
                     if len(pks) > self.MAX_PK_COUNT:
                         break
 
@@ -63,6 +63,9 @@ class Worker(Process):
                 if not pks:
                     time.sleep(1)
                     continue
+
+                # keep order to match the results
+                pks = list(pks)
 
                 self.logger.info("{0} -> {1} - qsize: {2}".format(
                     self.name, pks, self.queue.qsize()))
