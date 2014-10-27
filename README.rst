@@ -11,7 +11,7 @@ Meepo
 .. image:: http://img.shields.io/pypi/dm/meepo.svg?style=flat
    :target: https://pypi.python.org/pypi/meepo
 
-Meepo is event sourcing and event broadcasting for datebases.
+Meepo is event sourcing and event broadcasting for databases.
 
 Documentation: https://meepo.readthedocs.org/
 
