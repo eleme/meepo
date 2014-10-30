@@ -167,39 +167,26 @@ def es_sub(redis_dsn, tables, namespace=None, ttl=3600*24*3):
     r = redis.StrictRedis.from_url(
         redis_dsn, socket_timeout=1, socket_connect_timeout=0.1)
 
-    if ttl:
-        lua_ttl = "redis.call('EXPIRE', KEYS[1], {ttl})".format(ttl=ttl)
-    else:
-        lua_ttl = ""
-
-    LUA_TIME = """
-    local time = redis.call('TIME')
-    return tonumber(time[1])
-    """
-    LUA_ZADD = """
+    LUA_ZADD = ' '.join("""
     local score = redis.call('ZSCORE', KEYS[1], ARGV[2])
-    if score and ARGV[1] <= score then
+    if score and tonumber(ARGV[1]) <= tonumber(score) then
         return 0
     else
         redis.call('ZADD', KEYS[1], ARGV[1], ARGV[2])
-        {0}
         return 1
     end
-    """.format(lua_ttl)
-
-    r_time = r.register_script(LUA_TIME)
-    r_zadd = r.register_script(LUA_ZADD)
+    """.split())
+    r_time = lambda: r.eval("return tonumber(redis.call('TIME')[1])", 1, 1)
+    r_zadd = lambda k, pk: r.eval(LUA_ZADD, 1, k, r_time(), pk)
 
     for table in set(tables):
         def _sub(action, pk, table=table):
             key = "%s:%s_%s" % (namespace(), table, action)
             try:
-                r.ping()
-                time = r_time()
-                if r_zadd(keys=[key], args=[time, str(pk)]):
+                if r_zadd(key, str(pk)):
                     logger.info("%s_%s: %s -> %s" % (
                         table, action, pk,
-                        datetime.datetime.fromtimestamp(time)))
+                        datetime.datetime.now()))
                 else:
                     logger.info("%s_%s: %s -> skip" % (table, action, pk))
             except redis.ConnectionError:
