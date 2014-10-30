@@ -205,8 +205,7 @@ def es_sub(redis_dsn, tables, namespace=None, ttl=3600*24*3):
         sp_all = "%s:session_prepare" % namespace()
         sp_key = "%s:session_prepare:%s" % (namespace(), sid)
         try:
-            r.ping()
-            with r.pipeline() as p:
+            with r.pipeline(transaction=False) as p:
                 p.srem(sp_all, sid)
                 p.expire(sp_key, 60 * 60)
                 p.execute()
@@ -225,8 +224,7 @@ def es_sub(redis_dsn, tables, namespace=None, ttl=3600*24*3):
         sp_key = "%s:session_prepare:%s" % (namespace(), sid)
 
         try:
-            r.ping()
-            with r.pipeline() as p:
+            with r.pipeline(transaction=False) as p:
                 p.sadd(sp_all, sid)
                 p.hset(sp_key, action, pickle.dumps(event))
                 p.execute()
