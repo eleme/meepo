@@ -175,10 +175,6 @@ def sqlalchemy_pub(dbsession, strict_tables=None):
     else:
         logger.debug("strict_tables: {}".format(strict_tables))
 
-        def _strict_filter(objs):
-            return (obj for obj in objs
-                    if obj.__table__.fullname in strict_tables)
-
         def session_prepare(session):
             """Record session prepare state in before_commit
             """
