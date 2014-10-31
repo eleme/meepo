@@ -1,6 +1,14 @@
 Meepo Changelog
 ===============
 
+Version 0.1.7
+-------------
+
+Released on October 30, 2014.
+
+- compatiable with twemproxy
+
+
 Version 0.1.6
 -------------
 
