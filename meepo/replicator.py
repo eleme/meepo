@@ -70,8 +70,12 @@ class Worker(Process):
                 # keep order to match the results
                 pks = list(pks)
 
-                self.logger.info("{0} -> {1} - qsize: {2}".format(
-                    self.name, pks, self.queue.qsize()))
+                try:
+                    # Mac / UNIX don't support qsize
+                    self.logger.info("{0} -> {1} - qsize: {2}".format(
+                        self.name, pks, self.queue.qsize()))
+                except NotImplementedError:
+                    self.logger.info("{0} -> {1}".format(self.name, pks))
 
                 if self.multi:
                     results = self.cb(pks)
