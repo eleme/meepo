@@ -215,17 +215,22 @@ class RedisCacheReplicator(Replicator):
         self._ctx = zmq.Context()
         self.socket = self._ctx.socket(zmq.SUB)
 
-    def _cache_update_gen(self, table, serializer):
+    def _cache_update_gen(self, table, serializer, multi=False):
+        def cache_update_multi(pks):
+            keys = ["%s:%s:%s" % (self.namespace, table, p) for p in pks]
+            self.logger.debug("cache update -> %s:%s" % (table, pks))
+            return [self.r.mset(dict(zip(keys, serializer(pks))))] * len(pks)
+
         def cache_update(pk):
             key = "%s:%s:%s" % (self.namespace, table, pk)
             self.logger.debug("cache update -> %s:%s" % (table, pk))
             return self.r.set(key, serializer(pk))
-        return cache_update
+        return cache_update_multi if multi else cache_update
 
     def _cache_delete_gen(self, table):
         def cache_delete(pks):
             keys = set("%s:%s:%s" % (self.namespace, table, p) for p in pks)
-            self.logger.debug("cache delete -> %s:%s" % (table, set(pks)))
+            self.logger.debug("cache delete -> %s:%s" % (table, pks))
             return [self.r.delete(*keys) >= 0] * len(pks)
         return cache_delete
 
@@ -247,7 +252,7 @@ class RedisCacheReplicator(Replicator):
                     hash_ring[hash(q)] = q
                 self.update_queues[table] = hash_ring
 
-                cache_update = self._cache_update_gen(table, func)
+                cache_update = self._cache_update_gen(table, func, multi=multi)
                 self.workers[table] = [
                     Worker("%s_cache_update" % table, q, cache_update,
                            multi=multi,
