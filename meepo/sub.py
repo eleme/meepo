@@ -152,8 +152,8 @@ def es_sub(redis_dsn, tables, namespace=None, ttl=3600*24*3):
     This subscriber will use redis as event sourcing storage layer.
 
     Note here we only needs a 'weak' event sourcing, we only record primary
-    keys, which means we only care about what event happend after some time,
-    and ignore how many times it happens.
+    keys with lastest change timestamp, which means we only care about
+    what event happend after some time, and ignore how many times it happens.
     """
     logger = logging.getLogger("meepo.sub.es_sub")
 

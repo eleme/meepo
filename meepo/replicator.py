@@ -11,6 +11,7 @@
 
 import collections
 import logging
+import redis
 import time
 
 from multiprocessing import Process, Queue
@@ -42,6 +43,7 @@ class Worker(Process):
         # config logger
         logger_name = logger_name or "name-%s" % id(self)
         self.logger = logging.getLogger(logger_name)
+        self.logger.debug("worker %s initing..." % self.name)
 
         # config retry
         self._max_retry_interval = max_retry_interval
@@ -49,8 +51,9 @@ class Worker(Process):
         self._retry_stats = collections.Counter()
 
     def run(self):
-        try:
-            while True:
+        self.logger.debug("worker %s running..." % self.name)
+        while True:
+            try:
                 pks = set()
 
                 # try get all pks from queue at once
@@ -89,8 +92,13 @@ class Worker(Process):
                 if not all(results):
                     time.sleep(min(3 * sum(results), self._max_retry_interval))
 
-        except KeyboardInterrupt:
-            self.logger.debug("KeyboardInterrupt stop %s" % self.name)
+            except KeyboardInterrupt:
+                self.logger.debug("KeyboardInterrupt stop %s" % self.name)
+                break
+
+            except Exception as e:
+                self.logger.exception(e)
+                time.sleep(10)
 
     def on_fail(self, pk):
         self._retry_stats[pk] += 1
@@ -109,20 +117,30 @@ class Worker(Process):
             del self._retry_stats[pk]
 
 
-class ZmqReplicator(object):
+class Replicator(object):
+    def __init__(self, name="meepo.replicator.zmq"):
+        # replicator logger naming
+        self.name = name
+        self.logger = logging.getLogger(name)
+
+    def run(self):
+        raise NotImplementedError()
+
+
+class ZmqReplicator(Replicator):
     """Replicator base class.
 
     Trigger retrive, process, store steps to do replication.
     """
 
-    def __init__(self, listen, name="meepo.replicator.zmq"):
+    def __init__(self, listen=None, **kwargs):
+        super(ZmqReplicator, self).__init__(**kwargs)
+
         self.listen = listen
+
+        # init workers
         self.workers = {}
         self.worker_queues = {}
-
-        # replicator logger naming
-        self.name = name
-        self.logger = logging.getLogger(name)
 
         # init zmq socket
         self._ctx = zmq.Context()
@@ -153,7 +171,7 @@ class ZmqReplicator(object):
         return wrapper
 
     def run(self):
-        """Run replicator.
+        """Run zmq replicator.
 
         Main process receive messages and distribute them to worker queues.
         """
@@ -176,3 +194,110 @@ class ZmqReplicator(object):
             self.logger.debug("replicator: {0} -> {1}".format(topic, pks))
             for pk in pks:
                 self.worker_queues[topic][hash(pk)].put(pk)
+
+
+class RedisCacheReplicator(Replicator):
+    def __init__(self, listen, redis_dsn, namespace=None, **kwargs):
+        super(RedisCacheReplicator, self).__init__(**kwargs)
+
+        self.listen = listen
+        self.redis_dsn = redis_dsn
+        self.namespace = namespace or "meepo.repl.rcache"
+
+        self.r = redis.Redis.from_url(self.redis_dsn)
+
+        # init workers
+        self.workers = {}
+        self.update_queues = {}
+        self.delete_queues = {}
+
+        # init zmq socket
+        self._ctx = zmq.Context()
+        self.socket = self._ctx.socket(zmq.SUB)
+
+    def _cache_update_gen(self, table, serializer):
+        def cache_update(pk):
+            key = "%s:%s:%s" % (self.namespace, table, pk)
+            self.logger.debug("cache update -> %s:%s" % (table, pk))
+            return self.r.set(key, serializer(pk))
+        return cache_update
+
+    def _cache_delete_gen(self, table):
+        def cache_delete(pk):
+            key = "%s:%s:%s" % (self.namespace, table, pk)
+            self.logger.debug("cache delete -> %s:%s" % (table, pk))
+            return self.r.delete(key)
+        return cache_delete
+
+    def cache(self, *tables, **kwargs):
+        """Table cache serializer registry.
+
+        serializer callback should receive two args: topic and pk, and then
+        return the serialized bytes.
+        """
+        workers = kwargs.pop("workers", 1)
+        multi = kwargs.pop("multi", False)
+
+        def wrapper(func):
+            for table in tables:
+                # hash ring for cache update
+                queues = [Queue() for _ in range(workers)]
+                hash_ring = ConsistentHashRing()
+                for q in queues:
+                    hash_ring[hash(q)] = q
+                self.update_queues[table] = hash_ring
+
+                cache_update = self._cache_update_gen(table, func)
+                self.workers[table] = [
+                    Worker("%s_cache_update" % table, q, cache_update,
+                           multi=multi,
+                           logger_name="%s.%s" % (self.name, table))
+                    for q in queues]
+
+                # single worker for cache delete
+                delete_q = Queue()
+                self.delete_queues[table] = delete_q
+                cache_delete = self._cache_delete_gen(table)
+                self.workers[table].append(
+                    Worker("%s_cache_delete" % table, delete_q, cache_delete,
+                           multi=multi,
+                           logger_name="%s.%s" % (self.name, table)))
+
+                self.socket.setsockopt(zmq.SUBSCRIBE, asbytes(table))
+            return func
+        return wrapper
+
+    def run(self):
+        """Run redis cache replicator.
+
+        Main process receive messages, process and distribute them to worker
+        queues.
+        """
+        for workers in self.workers.values():
+            for w in workers:
+                w.start()
+
+        self.socket.connect(self.listen)
+        while True:
+            msg = self.socket.recv_string()
+            lst = msg.split()
+            if len(lst) == 2:
+                topic, pks = lst[0], [lst[1], ]
+            elif len(lst) > 2:
+                topic, pks = lst[0], lst[1:]
+            else:
+                self.logger.error("msg corrupt -> %s" % msg)
+                return
+
+            self.logger.debug("redis cache replicator: {0} -> {1}".format(
+                topic, pks))
+            table, action = topic.rsplit('_', 1)
+            if action in ("write", "update"):
+                for pk in pks:
+                    self.update_queues[table][hash(pk)].put(pk)
+            elif action == "delete":
+                for pk in pks:
+                    self.delete_queues[table].put(pk)
+            else:
+                self.logger.error("msg corrupt -> %s" % msg)
+                return
