@@ -223,10 +223,10 @@ class RedisCacheReplicator(Replicator):
         return cache_update
 
     def _cache_delete_gen(self, table):
-        def cache_delete(pk):
-            key = "%s:%s:%s" % (self.namespace, table, pk)
-            self.logger.debug("cache delete -> %s:%s" % (table, pk))
-            return self.r.delete(key)
+        def cache_delete(pks):
+            keys = set("%s:%s:%s" % (self.namespace, table, p) for p in pks)
+            self.logger.debug("cache delete -> %s:%s" % (table, set(pks)))
+            return [self.r.delete(*keys) >= 0] * len(pks)
         return cache_delete
 
     def cache(self, *tables, **kwargs):
@@ -260,7 +260,7 @@ class RedisCacheReplicator(Replicator):
                 cache_delete = self._cache_delete_gen(table)
                 self.workers[table].append(
                     Worker("%s_cache_delete" % table, delete_q, cache_delete,
-                           multi=multi,
+                           multi=True,
                            logger_name="%s.%s" % (self.name, table)))
 
                 self.socket.setsockopt(zmq.SUBSCRIBE, asbytes(table))
