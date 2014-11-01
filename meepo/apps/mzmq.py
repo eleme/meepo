@@ -31,10 +31,10 @@ from meepo.logutils import setup_logger
 
 @click.command()
 @click.option("-b", "--blocking", is_flag=True)
-@click.option('-m', '--master_dsn')
 @click.option('-b', '--bind')
+@click.option('-m', '--master_dsn')
 @click.argument('tables', nargs=-1)
-def main(master_dsn, bind, tables, blocking=False):
+def main(bind, master_dsn, tables, blocking=False):
     setup_logger("INFO")
 
     logger = logging.getLogger(__name__)

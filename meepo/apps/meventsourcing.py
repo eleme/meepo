@@ -4,10 +4,10 @@
     meepo.apps.meventsourcing
     ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    EventSourcing app.
+    Meepo EventSourcing app.
 
     This app is a simplified version of event sourcing, it only sources about
-    the primary keys and their last changing time.
+    the primary keys and their lastest changing time.
 """
 
 import logging
