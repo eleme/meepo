@@ -69,10 +69,12 @@ def mysql_pub(mysql_dsn, tables=None, blocking=False, **kwargs):
         if isinstance(event, WriteRowsEvent):
             sg_name = "{}_write".format(event.table)
             sg = signal(sg_name)
+            sg_raw = signal("{}_raw".format(sg_name))
 
             for row in rows:
                 pk = _pk(row["values"])
                 sg.send(pk)
+                sg_raw.send(row)
 
                 logger.debug("{} -> {}, {}".format(sg_name, pk, timestamp))
 
@@ -83,6 +85,7 @@ def mysql_pub(mysql_dsn, tables=None, blocking=False, **kwargs):
             for row in rows:
                 pk = _pk(row["after_values"])
                 sg.send(pk)
+                sg_raw.send(row)
 
                 logger.debug("{} -> {}, {}".format(sg_name, pk, timestamp))
 
@@ -93,6 +96,7 @@ def mysql_pub(mysql_dsn, tables=None, blocking=False, **kwargs):
             for row in rows:
                 pk = _pk(row["values"])
                 sg.send(pk)
+                sg_raw.send(row)
 
                 logger.debug("{} -> {}, {}".format(sg_name, pk, timestamp))
 
@@ -130,11 +134,13 @@ def sqlalchemy_pub(dbsession, strict_tables=None):
         """
         sg_name = "{}_{}".format(obj.__table__, action)
         sg = signal(sg_name)
+        sg_raw = signal("{}_raw".format(sg_name))
 
         pk = _pk(obj)
         if pk:
             logger.debug("{} -> {}".format(sg_name, pk))
             sg.send(pk)
+            sg_raw.send(obj)
 
     def _init_session(session):
         for action in ("write", "update", "delete"):
