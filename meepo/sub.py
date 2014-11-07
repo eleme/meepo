@@ -211,6 +211,9 @@ def es_sub(redis_dsn, tables, namespace=None, ttl=3600*24*3):
                 p.execute()
             return True
         except redis.ConnectionError:
+            logger.warn(
+                "redis connection error in session commit/rollback: %s" %
+                sid)
             return False
         except Exception as e:
             logger.exception(e)
@@ -230,7 +233,7 @@ def es_sub(redis_dsn, tables, namespace=None, ttl=3600*24*3):
                 p.execute()
             logger.info("session_prepare %s -> %s" % (action, sid))
         except redis.ConnectionError:
-            logger.error("session prepare failed: %s" % sid)
+            logger.warn("redis connection error in session prepare: %s" % sid)
         except Exception as e:
             logger.exception(e)
     signal("session_prepare").connect(session_prepare_hook, weak=False)
@@ -239,14 +242,14 @@ def es_sub(redis_dsn, tables, namespace=None, ttl=3600*24*3):
         if _clean_sid(sid):
             logger.info("session_commit -> %s" % sid)
         else:
-            logger.error("session_commit failed -> %s" % sid)
+            logger.warn("session_commit failed -> %s" % sid)
     signal("session_commit").connect(session_commit_hook, weak=False)
 
     def session_rollback_hook(sid):
         if _clean_sid(sid):
             logger.info("session_rollback -> %s" % sid)
         else:
-            logger.error("session_rollback failed -> %s" % sid)
+            logger.warn("session_rollback failed -> %s" % sid)
     signal("session_rollback").connect(session_rollback_hook, weak=False)
 
 
