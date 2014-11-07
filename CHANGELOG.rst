@@ -1,6 +1,15 @@
 Meepo Changelog
 ===============
 
+Version 0.1.8
+-------------
+
+Released on November 7, 2014.
+
+- add RedisCacheReplicator
+- add signal raw for better customization
+
+
 Version 0.1.7
 -------------
 
