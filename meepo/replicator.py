@@ -183,7 +183,11 @@ class ZmqReplicator(Replicator):
             for w in workers:
                 w.start()
 
-        self.socket.connect(self.listen)
+        if isinstance(self.listen, list):
+            for i in self.listen:
+                self.socket.connect(i)
+        else:
+            self.socket.connect(self.listen)
         while True:
             msg = self.socket.recv_string()
             lst = msg.split()
