@@ -183,7 +183,11 @@ class ZmqReplicator(Replicator):
             for w in workers:
                 w.start()
 
-        self.socket.connect(self.listen)
+        if isinstance(self.listen, list):
+            for i in self.listen:
+                self.socket.connect(i)
+        else:
+            self.socket.connect(self.listen)
         while True:
             msg = self.socket.recv_string()
             lst = msg.split()
@@ -193,7 +197,7 @@ class ZmqReplicator(Replicator):
                 topic, pks = lst[0], lst[1:]
             else:
                 self.logger.error("msg corrupt -> %s" % msg)
-                return
+                continue
 
             self.logger.debug("replicator: {0} -> {1}".format(topic, pks))
             for pk in pks:
@@ -296,7 +300,7 @@ class RedisCacheReplicator(Replicator):
                 topic, pks = lst[0], lst[1:]
             else:
                 self.logger.error("msg corrupt -> %s" % msg)
-                return
+                continue
 
             self.logger.debug("redis cache replicator: {0} -> {1}".format(
                 topic, pks))
@@ -309,4 +313,4 @@ class RedisCacheReplicator(Replicator):
                     self.delete_queues[table].put(pk)
             else:
                 self.logger.error("msg corrupt -> %s" % msg)
-                return
+                continue
