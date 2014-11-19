@@ -8,6 +8,11 @@ tests/conf.json
 # C extensions
 *.so
 
+# intellij files
+.idea
+*.xml
+*.iml
+
 # Packages
 *.egg
 *.egg-info
