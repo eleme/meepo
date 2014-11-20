@@ -212,7 +212,7 @@ class Replicator(object):
 class ZmqReplicator(Replicator):
     """Replicator base class.
 
-    Trigger retrive, process, store steps to do replication.
+    Trigger retrieve, process, store steps to do replication.
     """
 
     def __init__(self, listen=None, **kwargs):

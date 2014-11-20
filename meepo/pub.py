@@ -112,7 +112,7 @@ def sqlalchemy_pub(dbsession, strict_tables=None):
 
     When `strict_tables` provided, two more signals may be triggered for table
     included. They can be used with prepare-commit pattern to help ensure 100%
-    reliablity on event sourcing (and broadcasting), note this will
+    reliability on event sourcing (and broadcasting), note this will
     need another monitor daemon to monitor the status. For more info about
     this patter, refer to documentation.
     """
