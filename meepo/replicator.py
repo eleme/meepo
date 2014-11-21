@@ -25,7 +25,7 @@ from .utils import ConsistentHashRing
 class Worker(Process):
     MAX_PK_COUNT = 256
 
-    def __init__(self, name, queue, cb, multi=False, logger_name=None,
+    def __init__(self, queue, name, cb, multi=False, logger_name=None,
                  retry=True, max_retry_count=10, max_retry_interval=60):
         """kwargs:
         multi: allow multiple pks to be sent in one callback.
@@ -121,6 +121,45 @@ class Worker(Process):
             del self._retry_stats[pk]
 
 
+class WorkerPool(object):
+    def __init__(self, queues, *args, **kwargs):
+        self._args = args
+        self._kwargs = kwargs
+        self._queues = queues
+
+    def _make_worker(self, queue):
+        return Worker(queue, *self._args, **self._kwargs)
+
+    def terminate(self):
+        self._sentinel_worker.terminate()
+
+    def start(self):
+        logger = logging.getLogger("meepo.replicator.sentinel")
+
+        def _f():
+            worker_map = {
+                q: self._make_worker(q) for q in self._queues
+            }
+            for _, worker in worker_map.items():
+                worker.start()
+
+            logger.info("starting sentinel...")
+            while True:
+                logger.debug("ping {} worker".format(self._args[0]))
+                for queue, worker in worker_map.items():
+                    if not worker.is_alive():
+                        logger.warn("{} worker {} dead, recreating...".format(
+                            self._args[0], worker.pid))
+
+                        worker_map[queue] = self._make_worker(queue)
+                        worker_map[queue].start()
+
+                time.sleep(10)
+
+        self._sentinel_worker = Process(target=_f)
+        self._sentinel_worker.start()
+
+
 class Replicator(object):
     def __init__(self, name="meepo.replicator.zmq"):
         # replicator logger naming
@@ -166,10 +205,9 @@ class ZmqReplicator(Replicator):
                 for q in queues:
                     hash_ring[hash(q)] = q
                 self.worker_queues[topic] = hash_ring
-                self.workers[topic] = [
-                    Worker(topic, q, func, multi=multi,
-                           logger_name="%s.%s" % (self.name, topic))
-                    for q in queues]
+                self.workers[topic] = WorkerPool(
+                    queues, topic, func, multi=multi,
+                    logger_name="%s.%s" % (self.name, topic))
                 self.socket.setsockopt(zmq.SUBSCRIBE, asbytes(topic))
             return func
         return wrapper
@@ -179,29 +217,35 @@ class ZmqReplicator(Replicator):
 
         Main process receive messages and distribute them to worker queues.
         """
-        for workers in self.workers.values():
-            for w in workers:
-                w.start()
+        for worker_pool in self.workers.values():
+            worker_pool.start()
 
         if isinstance(self.listen, list):
             for i in self.listen:
                 self.socket.connect(i)
         else:
             self.socket.connect(self.listen)
-        while True:
-            msg = self.socket.recv_string()
-            lst = msg.split()
-            if len(lst) == 2:
-                topic, pks = lst[0], [lst[1], ]
-            elif len(lst) > 2:
-                topic, pks = lst[0], lst[1:]
-            else:
-                self.logger.error("msg corrupt -> %s" % msg)
-                continue
 
-            self.logger.debug("replicator: {0} -> {1}".format(topic, pks))
-            for pk in pks:
-                self.worker_queues[topic][hash(pk)].put(pk)
+        try:
+            while True:
+                msg = self.socket.recv_string()
+                lst = msg.split()
+                if len(lst) == 2:
+                    topic, pks = lst[0], [lst[1], ]
+                elif len(lst) > 2:
+                    topic, pks = lst[0], lst[1:]
+                else:
+                    self.logger.error("msg corrupt -> %s" % msg)
+                    continue
+
+                self.logger.debug("replicator: {0} -> {1}".format(topic, pks))
+                for pk in pks:
+                    self.worker_queues[topic][hash(pk)].put(pk)
+        except Exception as e:
+            self.logger.exception(e)
+        finally:
+            for worker_pool in self.workers.values():
+                worker_pool.terminate()
 
 
 class RedisCacheReplicator(Replicator):
