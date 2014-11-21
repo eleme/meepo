@@ -153,6 +153,8 @@ class WorkerPool(object):
         self._kwargs = kwargs
         self._queues = queues
 
+        self._sentinel_worker = None
+
     def _make_worker(self, queue):
         return Worker(queue, *self._args, **self._kwargs)
 
