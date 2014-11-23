@@ -15,6 +15,7 @@ import redis
 import time
 
 from multiprocessing import Process, Queue
+from queue import Empty
 
 import zmq
 from zmq.utils.strtypes import asbytes
@@ -22,11 +23,24 @@ from zmq.utils.strtypes import asbytes
 from .utils import ConsistentHashRing
 
 
+def _deduplicate(queue, max_size):
+    items = []
+    for i in range(0, max_size):
+        try:
+            items.append(queue.get_nowait())
+        except Empty:
+            break
+    items = set(items)
+    for item in items:
+        queue.put(item)
+
+
 class Worker(Process):
     MAX_PK_COUNT = 256
 
     def __init__(self, queue, name, cb, multi=False, logger_name=None,
-                 retry=True, max_retry_count=10, max_retry_interval=60):
+                 retry=True, queue_limit=10000, max_retry_count=10,
+                 max_retry_interval=60):
         """kwargs:
         multi: allow multiple pks to be sent in one callback.
         retry: retry on pk if callback failed.
@@ -36,6 +50,7 @@ class Worker(Process):
         super(Worker, self).__init__()
         self.name = name
         self.queue = queue
+        self.queue_limit = queue_limit
         self.cb = cb
         self.multi = multi
         self.retry = retry
@@ -55,6 +70,14 @@ class Worker(Process):
         while True:
             try:
                 pks = set()
+
+                try:
+                    max_size = self.queue.qsize()
+                    if max_size > self.queue_limit:
+                        self.logger.info("worker %s deduplicating" % self.name)
+                        _deduplicate(self.queue, max_size)
+                except NotImplementedError:
+                    pass
 
                 # try get all pks from queue at once
                 while not self.queue.empty():
@@ -197,6 +220,7 @@ class ZmqReplicator(Replicator):
         """
         workers = kwargs.pop("workers", 1)
         multi = kwargs.pop("multi", False)
+        queue_limit = kwargs.pop("queue_limit", 10000)
 
         def wrapper(func):
             for topic in topics:
@@ -206,7 +230,7 @@ class ZmqReplicator(Replicator):
                     hash_ring[hash(q)] = q
                 self.worker_queues[topic] = hash_ring
                 self.workers[topic] = WorkerPool(
-                    queues, topic, func, multi=multi,
+                    queues, topic, func, multi=multi, queue_limit=queue_limit,
                     logger_name="%s.%s" % (self.name, topic))
                 self.socket.setsockopt(zmq.SUBSCRIBE, asbytes(topic))
             return func
