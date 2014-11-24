@@ -19,7 +19,7 @@ install_requires = [
     "SQLAlchemy>=0.9.0,<1.0.0",
     "blinker>=1.3,<2.0",
     "click>=3.3,<4.0",
-    "pyzmq>=14.3.1,<14.4.0",
+    "pyzmq>=14.4.1,<15.0.0",
     "redis>=2.10.3,<2.11.0",
 ]
 
