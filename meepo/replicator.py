@@ -172,13 +172,26 @@ class WorkerPool(object):
             logger.info("starting sentinel...")
             while True:
                 logger.debug("ping {} worker".format(self._args[0]))
+                dead = qsize = 0
                 for queue, worker in worker_map.items():
+                    try:
+                        qsize += queue.qsize()
+                    except NotImplementedError:
+                        qsize = None
+
                     if not worker.is_alive():
+                        dead += 1
                         logger.warn("{} worker {} dead, recreating...".format(
                             self._args[0], worker.pid))
 
                         worker_map[queue] = self._make_worker(queue)
                         worker_map[queue].start()
+
+                msg = ["{} total qsize {}".format(self._args[0], qsize),
+                       "{} worker alive, {} worker dead".format(
+                           len(worker_map) - dead, dead)]
+
+                logger.info("; ".join(msg))
 
                 time.sleep(10)
 
