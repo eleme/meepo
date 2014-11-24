@@ -22,6 +22,8 @@ from zmq.utils.strtypes import asbytes
 
 from .utils import ConsistentHashRing
 
+zmq_ctx = zmq.Context()
+
 
 def _deduplicate(queue, max_size):
     items = []
@@ -117,7 +119,8 @@ class Worker(Process):
 
                 # take a nap on fail
                 if not all(results):
-                    time.sleep(min(3 * sum(results), self._max_retry_interval))
+                    time.sleep(min(3 * results.count(False),
+                                   self._max_retry_interval))
 
             except KeyboardInterrupt:
                 self.logger.debug("KeyboardInterrupt stop %s" % self.name)
@@ -209,8 +212,7 @@ class ZmqReplicator(Replicator):
         self.worker_queues = {}
 
         # init zmq socket
-        self._ctx = zmq.Context()
-        self.socket = self._ctx.socket(zmq.SUB)
+        self.socket = zmq_ctx.socket(zmq.SUB)
 
     def event(self, *topics, **kwargs):
         """Topic callback registry.
@@ -288,8 +290,7 @@ class RedisCacheReplicator(Replicator):
         self.delete_queues = {}
 
         # init zmq socket
-        self._ctx = zmq.Context()
-        self.socket = self._ctx.socket(zmq.SUB)
+        self.socket = zmq_ctx.socket(zmq.SUB)
 
     def _cache_update_gen(self, table, serializer, multi=False):
         def cache_update_multi(pks):
