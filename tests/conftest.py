@@ -44,6 +44,7 @@ def mysql_dsn(conf):
     sql = """
     DROP DATABASE IF EXISTS meepo_test;
     CREATE DATABASE meepo_test;
+    DROP TABLE IF EXISTS meepo_test.test;
     CREATE TABLE meepo_test.test (
         id INT NOT NULL AUTO_INCREMENT,
         data VARCHAR (256) NOT NULL,
@@ -55,6 +56,7 @@ def mysql_dsn(conf):
     print("executed")
 
     # release conn
+    cursor.close()
     conn.close()
 
     return dsn

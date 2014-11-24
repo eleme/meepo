@@ -81,6 +81,7 @@ def mysql_pub(mysql_dsn, tables=None, blocking=False, **kwargs):
         elif isinstance(event, UpdateRowsEvent):
             sg_name = "{}_update".format(event.table)
             sg = signal(sg_name)
+            sg_raw = signal("{}_raw".format(sg_name))
 
             for row in rows:
                 pk = _pk(row["after_values"])
@@ -92,6 +93,7 @@ def mysql_pub(mysql_dsn, tables=None, blocking=False, **kwargs):
         elif isinstance(event, DeleteRowsEvent):
             sg_name = "{}_delete".format(event.table)
             sg = signal(sg_name)
+            sg_raw = signal("{}_raw".format(sg_name))
 
             for row in rows:
                 pk = _pk(row["values"])
