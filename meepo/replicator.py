@@ -15,7 +15,10 @@ import redis
 import time
 
 from multiprocessing import Process, Queue
-from queue import Empty
+try:
+    from queue import Empty
+except ImportError:
+    from Queue import Empty
 
 import zmq
 from zmq.utils.strtypes import asbytes
