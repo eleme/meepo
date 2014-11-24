@@ -19,13 +19,13 @@ def conf():
     if os.path.exists(fname):
         with open(fname) as f:
             return json.load(f)
-    else:
-        return None
 
 
 @pytest.fixture(scope="module")
 def mysql_dsn(conf):
     """MySQL server dsn
+
+    This fixture will init a clean meepo_test database with a 'test' table
     """
     dsn = conf["mysql_dsn"] if conf else "mysql+pymysql://root@localhost/"
 

@@ -12,6 +12,7 @@ python:
 install:
   - pip install -e ".[dev]"
 before_script:
+  # enable row-based binlog
   - "sudo touch /etc/mysql/conf.d/replication.cnf"
   - "sudo chmod 777 /etc/mysql/conf.d/replication.cnf"
   - "echo '[mysqld]' > /etc/mysql/conf.d/replication.cnf"
