@@ -15,15 +15,11 @@ import redis
 import time
 
 from multiprocessing import Process, Queue
-try:
-    from queue import Empty
-except ImportError:
-    from Queue import Empty
-
 import zmq
 from zmq.utils.strtypes import asbytes
 
 from .utils import ConsistentHashRing
+from ._compat import Empty
 
 zmq_ctx = zmq.Context()
 
