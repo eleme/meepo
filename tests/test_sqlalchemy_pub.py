@@ -13,12 +13,12 @@ def test_sqlalchemy_pub(mysql_dsn):
      s_events, s_commits, s_rollbacks) = ([] for _ in range(6))
 
     def _clear():
-        t_writes.clear()
-        t_updates.clear()
-        t_deletes.clear()
-        s_events.clear()
-        s_commits.clear()
-        s_rollbacks.clear()
+        del t_writes[:]
+        del t_updates[:]
+        del t_deletes[:]
+        del s_events[:]
+        del s_commits[:]
+        del s_rollbacks[:]
 
     def test_sg(sg_list):
         return lambda pk: sg_list.append(pk)
