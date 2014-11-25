@@ -10,6 +10,7 @@ tests/conf.json
 
 # intellij files
 .idea
+out
 *.xml
 *.iml
 

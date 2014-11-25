@@ -236,7 +236,7 @@ class ZmqReplicator(Replicator):
         the replication job.
         """
         workers = kwargs.pop("workers", 1)
-        multi = kwargs.pop("multi", False)
+        multi = kwargs.pop("multi", false)
         queue_limit = kwargs.pop("queue_limit", 10000)
 
         def wrapper(func):

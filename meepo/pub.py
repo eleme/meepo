@@ -144,24 +144,36 @@ def sqlalchemy_pub(dbsession, strict_tables=None):
             sg.send(pk)
             sg_raw.send(obj)
 
-    def _init_session(session):
+    def session_init(session, *args, **kwargs):
+        if hasattr(session, "meepo_unique_id"):
+            logger.debug("skipped - session_init")
+            return
+
         for action in ("write", "update", "delete"):
             attr = "pending_{}".format(action)
             if not hasattr(session, attr):
                 setattr(session, attr, set())
+        session.meepo_unique_id = uuid.uuid4().hex
+        logger.debug("%s - session_init" % session.meepo_unique_id)
 
-    def after_flush_hook(session, flush_ctx):
+    def session_del(session):
+        del session.meepo_unique_id
+        del session.pending_write
+        del session.pending_update
+        del session.pending_delete
+
+    def before_flush_hook(session, flush_ctx, nonsense):
         """Record session changes on flush
         """
-        _init_session(session)
+        session_init(session)
+        logger.debug("%s - before_flush" % session.meepo_unique_id)
         session.pending_write |= set(session.new)
         session.pending_update |= set(session.dirty)
         session.pending_delete |= set(session.deleted)
-    event.listen(dbsession, "after_flush", after_flush_hook)
+    event.listen(dbsession, "before_flush", before_flush_hook)
 
     def _pub_session(session):
-        _init_session(session)
-
+        logger.debug("pub_session")
         for obj in session.pending_write:
             _pub(obj, action="write")
         for obj in session.pending_update:
@@ -178,17 +190,20 @@ def sqlalchemy_pub(dbsession, strict_tables=None):
             """Publish signals
             """
             _pub_session(session)
+            session_del(session)
         event.listen(dbsession, "after_commit", after_commit_hook)
 
     else:
         logger.debug("strict_tables: {}".format(strict_tables))
 
-        def session_prepare(session):
+        def session_prepare(session, flush_ctx):
             """Record session prepare state in before_commit
             """
-            assert not hasattr(session, 'meepo_unique_id')
-            _init_session(session)
-            session.meepo_unique_id = uuid.uuid4().hex
+            if not hasattr(session, 'meepo_unique_id'):
+                session_init(session)
+
+            logger.debug("%s - after_flush" % session.meepo_unique_id)
+
             for action in ("write", "update", "delete"):
                 objs = [o for o in getattr(session, "pending_%s" % action)
                         if o.__table__.fullname in strict_tables]
@@ -198,33 +213,37 @@ def sqlalchemy_pub(dbsession, strict_tables=None):
                 prepare_event = collections.defaultdict(set)
                 for obj in objs:
                     prepare_event[obj.__table__.fullname].add(_pk(obj))
-                logger.debug("session_prepare {}: {} -> {}".format(
-                    action, session.meepo_unique_id, prepare_event))
+                logger.debug("{} - session_prepare_{} -> {}".format(
+                    session.meepo_unique_id, action, prepare_event))
                 signal("session_prepare").send(
                     prepare_event, sid=session.meepo_unique_id, action=action)
-        event.listen(dbsession, "before_commit", session_prepare)
+        event.listen(dbsession, "after_flush", session_prepare)
 
         def session_commit(session):
             """Commit session in after_commit
             """
-            assert hasattr(session, 'meepo_unique_id')
+            # this may happen when there's nothing to commit
+            if not hasattr(session, 'meepo_unique_id'):
+                logger.debug("skipped - after_commit")
+                return
 
             # normal session pub
+            logger.debug("%s - after_commit" % session.meepo_unique_id)
             _pub_session(session)
-
-            logger.debug("session_commit: {}".format(session.meepo_unique_id))
             signal("session_commit").send(session.meepo_unique_id)
-            del session.meepo_unique_id
+            session_del(session)
         event.listen(dbsession, "after_commit", session_commit)
 
         def session_rollback(session):
-            """Unprepare session in after_rollback.
+            """Clean session in after_rollback.
             """
+            # this may happen when there's nothing to rollback
             if not hasattr(session, 'meepo_unique_id'):
+                logger.debug("skipped - after_rollback")
                 return
 
-            logger.debug("session_rollback: {}".format(
-                session.meepo_unique_id))
+            # del session meepo id after rollback
+            logger.debug("%s - after_rollback" % session.meepo_unique_id)
             signal("session_rollback").send(session.meepo_unique_id)
-            del session.meepo_unique_id
+            session_del(session)
         event.listen(dbsession, "after_rollback", session_rollback)

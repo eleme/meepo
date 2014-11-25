@@ -2,6 +2,9 @@
 
 from __future__ import absolute_import
 
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
 import json
 import os
 
@@ -27,6 +30,8 @@ def mysql_dsn(conf):
 
     This fixture will init a clean meepo_test database with a 'test' table
     """
+    logger = logging.getLogger("fixture_mysql_dsn")
+
     dsn = conf["mysql_dsn"] if conf else "mysql+pymysql://root@localhost/"
 
     # init database
@@ -53,7 +58,7 @@ def mysql_dsn(conf):
     RESET MASTER;
     """
     cursor.execute(sql)
-    print("executed")
+    logging.debug("executed")
 
     # release conn
     cursor.close()

@@ -2,6 +2,9 @@
 
 from __future__ import absolute_import
 
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
 import pymysql
 from blinker import signal
 
@@ -9,6 +12,8 @@ from meepo._compat import urlparse
 
 
 def test_mysql_pub(mysql_dsn):
+    logger = logging.getLogger("test_mysql_pub")
+
     def test_sg(sg_list):
         return lambda pk: sg_list.append(pk)
 
@@ -54,6 +59,7 @@ def test_mysql_pub(mysql_dsn):
     cursor.close()
     conn.commit()
     conn.close()
+    logger.debug("mysql binlog generated")
 
     from meepo.pub import mysql_pub
     mysql_pub(mysql_dsn, tables=["test"])
