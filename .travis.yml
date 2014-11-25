@@ -23,4 +23,4 @@ before_script:
   - "sudo service mysql restart"
 script:
   - flake8 .
-  - py.test
+  - py.test --capture=no
