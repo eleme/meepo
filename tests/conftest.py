@@ -32,7 +32,8 @@ def mysql_dsn(conf):
     """
     logger = logging.getLogger("fixture_mysql_dsn")
 
-    dsn = conf["mysql_dsn"] if conf else "mysql+pymysql://root@localhost/"
+    dsn = conf["mysql_dsn"] if conf else \
+        "mysql+pymysql://root@localhost/meepo_test"
 
     # init database
 
@@ -58,7 +59,7 @@ def mysql_dsn(conf):
     RESET MASTER;
     """
     cursor.execute(sql)
-    logging.debug("executed")
+    logger.debug("executed")
 
     # release conn
     cursor.close()
