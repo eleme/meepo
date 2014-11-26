@@ -54,13 +54,13 @@ be  used to do a lot of interesting things, including:
 Intro
 =====
 
-`meepo` is a pubsub system for databases, it follows database table events
-from `sqlalchemy` or `mysql binlog`, and publish them to subscribers.
+``meepo`` is a pubsub system for databases, it follows database table events
+from ``sqlalchemy`` or ``mysql binlog``, and publish them to subscribers.
 
 MySQL Pub
 ---------
 
-`mysql_pub` event flow::
+``mysql_pub`` event flow::
 
                                                        +---------------------+
                                                        |                     |
@@ -84,8 +84,8 @@ MySQL Pub
 
 
 MySQL Pub use row-based mysql binlog as events source, and transfer them into
-table_action events. `mysql_pub` generates an accurate event stream with one
- pk per event.
+table_action events. ``mysql_pub`` generates an accurate event stream with one
+pk per event.
 
 For example, the  following sql:
 
@@ -121,7 +121,7 @@ Generates the following events:
 SQLAlchemy Pub
 ==============
 
-`sqlalchemy_pub` event flow::
+``sqlalchemy_pub`` event flow::
 
     +------------------+
     |                  |
@@ -149,12 +149,12 @@ SQLAlchemy Pub
 
 
 
-`SQLAlchemy` is a ORM layer above database, it uses `session` to maintain
+``SQLAlchemy`` is a ORM layer above database, it uses ``session`` to maintain
 model instances states before the data flush to database, and flush them to
 database in commit.
 
-So `meepo` will hook into the event system, record all the instances in
-`session.new`, `session.dirty`, `session.deleted` in `before_flush` event,
+So ``meepo`` will hook into the event system, record all the instances in
+``session.new``, ``session.dirty``, ``session.deleted`` in ``before_flush`` event,
 then publish the table_action event after commit issued.
 
 For example, the  following code:
@@ -197,7 +197,7 @@ Generates the following events:
 Examples
 ========
 
-Refer to `meepo/examples/` for more examples.
+Refer to ``meepo/examples/`` for more examples.
 
 
 Contribute
