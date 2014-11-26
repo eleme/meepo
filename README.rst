@@ -54,8 +54,9 @@ be  used to do a lot of interesting things, including:
 Intro
 =====
 
-``meepo`` is a pubsub system for databases, it follows database table events
-from ``sqlalchemy`` or ``mysql binlog``, and publish them to subscribers.
+``meepo`` is event sourcing and event broadcasting for databases, it follows
+database table events from ``sqlalchemy`` and ``mysql binlog``, and publish
+them to subscribers.
 
 MySQL Pub
 ---------

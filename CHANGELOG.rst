@@ -1,6 +1,18 @@
 Meepo Changelog
 ===============
 
+Version 0.1.9
+-------------
+
+Released on November 26, 2014.
+
+- multi listeners, sentinel process, queue deduplicate features for replicator,
+  via #13, #14
+- refine sqlalchemy_pub for more accurate event soucing
+- add tests for mysql_pub and sqlalchemy_pub
+- add examples
+
+
 Version 0.1.8
 -------------
 
