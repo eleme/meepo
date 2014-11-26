@@ -51,8 +51,6 @@ def binlog(mysql_dsn):
 
     # test sqls
     sql = """
-    TRUNCATE TABLE meepo_test.test;
-    RESET MASTER;
     INSERT INTO test (data) VALUES ('a');
     INSERT INTO test (data) VALUES ('b'), ('c'), ('d');
     UPDATE test SET data = 'aa' WHERE id = 1;
