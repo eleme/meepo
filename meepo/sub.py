@@ -25,10 +25,15 @@ def print_sub(tables):
     logger.info("print_sub tables: %s" % ", ".join(tables))
 
     for table in set(tables):
-        _print = lambda pk, t=table: logger.info("{} -> {}".format(t, pk))
-        signal("{}_write".format(table)).connect(_print, weak=False)
-        signal("{}_update".format(table)).connect(_print, weak=False)
-        signal("{}_delete".format(table)).connect(_print, weak=False)
+        signal("{}_write".format(table)).connect(
+            lambda pk, t=table: logger.info("{}_write -> {}".format(t, pk)),
+            weak=False)
+        signal("{}_update".format(table)).connect(
+            lambda pk, t=table: logger.info("{}_update -> {}".format(t, pk)),
+            weak=False)
+        signal("{}_delete".format(table)).connect(
+            lambda pk, t=table: logger.info("{}_delete -> {}".format(t, pk)),
+            weak=False)
 
 
 def replicate_sub(master_dsn, slave_dsn, tables=None):
