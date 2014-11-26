@@ -35,8 +35,8 @@ To use mysql binlog as event source, install additional requires with
 Features
 ========
 
-Meepo can publish the database events to outside world, so it can be used to
-do a lot of interesting things with its pubsub pattern, including:
+Meepo can publish the table events from database to the outside, so it can
+be  used to do a lot of interesting things, including:
 
 - cache invalidation
 
@@ -54,26 +54,144 @@ do a lot of interesting things with its pubsub pattern, including:
 Intro
 =====
 
-Meepo use a pubsub pattern to follow database events from sqlalchemy or mysql
-binlog then publish them to outside.
+`meepo` is a pubsub system for databases, it follows database table events
+from `sqlalchemy` or `mysql binlog`, and publish them to subscribers.
 
-Meepo uses blinker to connect its PUBs and SUBs, which will transform database
-events to :code:`{table}_{action}` signals with primary keys info.
+MySQL Pub
+---------
 
-Events demo:
+`mysql_pub` event flow::
 
-- when a user make an order with id 1234, :code:`order_write` signal
-  with :code:`1234` will be triggered.
+                                                       +---------------------+
+                                                       |                     |
+                                                   +--->  table_write event  |
+                                                   |   |                     |
+                                                   |   +---------------------+
+                                                   |
+    +--------------------+      +---------------+  |
+    |                    |      |               |  |   +---------------------+
+    |        mysql       |      |   meepo.pub   |  |   |                     |
+    |                    +------>               +--+--->  table_update event |
+    |  row-based binlog  |      |   mysql_pub   |  |   |                     |
+    |                    |      |               |  |   +---------------------+
+    +--------------------+      +---------------+  |
+                                                   |
+                                                   |   +---------------------+
+                                                   |   |                     |
+                                                   +--->  table_delete event |
+                                                       |                     |
+                                                       +---------------------+
 
-- when the status of order#1234 changed, :code:`order_update` signal
-  with :code:`1234` will be triggered.
 
-- when user deleted the order, :code:`order_delete` signal with :code:`1234`
-  will be triggered.
+MySQL Pub use row-based mysql binlog as events source, and transfer them into
+table_action events. `mysql_pub` generates an accurate event stream with one
+ pk per event.
 
-For every signals, you can add multiple subscribers or customize your own.
+For example, the  following sql:
 
-Refer to :code:`meepo/apps/` for more examples.
+.. code-block:: sql
+
+    INSERT INTO test (data) VALUES ('a');
+    INSERT INTO test (data) VALUES ('b'), ('c'), ('d');
+    UPDATE test SET data = 'aa' WHERE id = 1;
+    UPDATE test SET data = 'bb' WHERE id = 2;
+    UPDATE test SET data = 'cc' WHERE id != 1;
+    DELETE FROM test WHERE id != 1;
+    DELETE FROM test WHERE id = 1;
+
+Generates the following events:
+
+::
+
+    test_write 1
+    test_write 2
+    test_write 3
+    test_write 4
+    test_update 1
+    test_update 2
+    test_update 2
+    test_update 3
+    test_update 4
+    test_delete 2
+    test_delete 3
+    test_delete 4
+    test_delete 1
+
+
+SQLAlchemy Pub
+==============
+
+`sqlalchemy_pub` event flow::
+
+    +------------------+
+    |                  |
+    |    meepo.pub     |
+    |                  |
+    |  sqlalchemy_pub  |                                       +---------------------+
+    |                  |     +-----------------------+         |                     |
+    +---------+--------+     |                       |     +--->  table_write event  |
+              |              |      before_flush     |     |   |                     |
+        hook  |           +-->                       |     |   +---------------------+
+              |           |  |  record model states  |     |
+    +---------v--------+  |  |                       |     |
+    |                  |  |  +-----------+-----------+     |   +---------------------+
+    |    sqlalchemy    |  |              |                 |   |                     |
+    |                  +--+              |              +------>  table_update event |
+    |  session events  |                 |              |  |   |                     |
+    |                  |     +-----------v-----------+  |  |   +---------------------+
+    +------------------+     |                       |  |  |
+                             |     after_commit      |  |  |
+                             |                       +--+  |   +---------------------+
+                             |  record model states  |     |   |                     |
+                             |                       |     +--->  table_delete event |
+                             +-----------------------+         |                     |
+                                                               +---------------------+
+
+
+
+`SQLAlchemy` is a ORM layer above database, it uses `session` to maintain
+model instances states before the data flush to database, and flush them to
+database in commit.
+
+So `meepo` will hook into the event system, record all the instances in
+`session.new`, `session.dirty`, `session.deleted` in `before_flush` event,
+then publish the table_action event after commit issued.
+
+For example, the  following code:
+
+.. code-block:: python
+
+    class Test(Base):
+        __tablename__ = "test"
+        id = Column(Integer, primary_key=True)
+        data = Column(String)
+
+    t_1 = Test(id=1, data='a')
+    session.add(t_1)
+    session.commit()
+
+    t_2 = Test(id=2, data='b')
+    t_3 = Test(id=3, data='c')
+    session.add(t_2)
+    session.add(t_3)
+    session.add(t_4)
+    session.commit()
+
+    t_2.data = "x"
+    session.commit()
+
+    session.delete(t_3)
+    session.commit()
+
+Generates the following events:
+
+::
+
+    test_write 1
+    test_write 2
+    test_write 3
+    test_update 2
+    test_delete 3
 
 
 Examples
