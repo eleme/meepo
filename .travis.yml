@@ -22,5 +22,5 @@ before_script:
   - sudo chmod 700 /etc/mysql/conf.d/replication.cnf
   - sudo service mysql restart
 script:
-  - flake8 .
+  - flake8 meepo tests
   - py.test --capture=no

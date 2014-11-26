@@ -9,8 +9,6 @@ A demo script on how to use meepo with sqlalchemy.
 
 import logging
 
-import click
-
 import sqlalchemy as sa
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.ext.declarative import declarative_base
