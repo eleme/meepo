@@ -14,7 +14,7 @@ import pytest
 from meepo._compat import urlparse
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def conf():
     """Try load local conf.json
     """
@@ -24,7 +24,7 @@ def conf():
             return json.load(f)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def mysql_dsn(conf):
     """MySQL server dsn
 
