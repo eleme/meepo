@@ -24,7 +24,7 @@ install_requires = [
 ]
 
 mysqlbinlog_requires = [
-    "mysql-replication>=0.4.1,<0.5.0",
+    "mysql-replication>=0.5,<0.6.0",
 ]
 
 # nanomsg is still in beta
