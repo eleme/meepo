@@ -197,13 +197,7 @@ Generates the following events:
 Examples
 ========
 
-Dummy prints all database events.
-
-Use :code:`mprint` with mysql dsn with row-based binlog enabled.
-
-.. code:: bash
-
-    $ mprint -m "mysql://user:pwd@mysql_server/"
+Refer to `meepo/examples/` for more examples.
 
 
 Contribute
