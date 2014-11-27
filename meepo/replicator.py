@@ -13,12 +13,12 @@ import collections
 import logging
 import redis
 import time
+import ketama
 
 from multiprocessing import Process, Queue
 import zmq
 from zmq.utils.strtypes import asbytes
 
-from .utils import ConsistentHashRing
 from ._compat import Empty
 
 zmq_ctx = zmq.Context()
@@ -241,9 +241,9 @@ class ZmqReplicator(Replicator):
         def wrapper(func):
             for topic in topics:
                 queues = [Queue() for _ in range(workers)]
-                hash_ring = ConsistentHashRing()
+                hash_ring = ketama.Continuum()
                 for q in queues:
-                    hash_ring[hash(q)] = q
+                    hash_ring[str(hash(q))] = q
                 self.worker_queues[topic] = hash_ring
                 self.workers[topic] = WorkerPool(
                     queues, topic, func, multi=multi, queue_limit=queue_limit,
@@ -280,7 +280,7 @@ class ZmqReplicator(Replicator):
 
                 self.logger.debug("replicator: {0} -> {1}".format(topic, pks))
                 for pk in pks:
-                    self.worker_queues[topic][hash(pk)].put(pk)
+                    self.worker_queues[topic][str(hash(pk))].put(pk)
         except Exception as e:
             self.logger.exception(e)
         finally:
@@ -338,9 +338,9 @@ class RedisCacheReplicator(Replicator):
             for table in tables:
                 # hash ring for cache update
                 queues = [Queue() for _ in range(workers)]
-                hash_ring = ConsistentHashRing()
+                hash_ring = ketama.Continuum()
                 for q in queues:
-                    hash_ring[hash(q)] = q
+                    hash_ring[str(hash(q))] = q
                 self.update_queues[table] = hash_ring
 
                 cache_update = self._cache_update_gen(table, func, multi=multi)
