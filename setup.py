@@ -21,6 +21,7 @@ install_requires = [
     "click>=3.3,<4.0",
     "pyzmq>=14.4.1,<15.0.0",
     "redis>=2.10.3,<2.11.0",
+    "pyketama>=0.2.0",
 ]
 
 mysqlbinlog_requires = [
