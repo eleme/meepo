@@ -225,8 +225,19 @@ class ZmqReplicator(Replicator):
         self.workers = {}
         self.worker_queues = {}
 
-        # init zmq socket
-        self.socket = zmq_ctx.socket(zmq.SUB)
+        self.topics = set()
+
+    def _pub_socket(self):
+        socket = zmq_ctx.socket(zmq.SUB)
+        for topic in self.topics:
+            socket.setsockopt(zmq.SUBSCRIBE, topic)
+
+        if isinstance(self.listen, list):
+            for i in self.listen:
+                socket.connect(i)
+        else:
+            socket.connect(self.listen)
+        return socket
 
     def event(self, *topics, **kwargs):
         """Topic callback registry.
@@ -248,27 +259,36 @@ class ZmqReplicator(Replicator):
                 self.workers[topic] = WorkerPool(
                     queues, topic, func, multi=multi, queue_limit=queue_limit,
                     logger_name="%s.%s" % (self.name, topic))
-                self.socket.setsockopt(zmq.SUBSCRIBE, asbytes(topic))
+                self.topics.add(asbytes(topic))
             return func
         return wrapper
 
-    def run(self):
+    def run(self, reconnect_time=600, socket_timeout=10):
         """Run zmq replicator.
 
         Main process receive messages and distribute them to worker queues.
         """
+        poller = zmq.Poller()
+
         for worker_pool in self.workers.values():
             worker_pool.start()
 
-        if isinstance(self.listen, list):
-            for i in self.listen:
-                self.socket.connect(i)
-        else:
-            self.socket.connect(self.listen)
+        start = time.time()
+        socket = self._pub_socket()
+
+        poller.register(socket)
 
         try:
             while True:
-                msg = self.socket.recv_string()
+                sockets = poller.poll(timeout=socket_timeout * 1000)
+                if not sockets:
+                    continue
+
+                if time.time() - start >= reconnect_time:
+                    socket_compl = self._pub_socket()
+
+                msg = socket.recv_string()
+
                 lst = msg.split()
                 if len(lst) == 2:
                     topic, pks = lst[0], [lst[1], ]
@@ -281,6 +301,16 @@ class ZmqReplicator(Replicator):
                 self.logger.debug("replicator: {0} -> {1}".format(topic, pks))
                 for pk in pks:
                     self.worker_queues[topic][str(hash(pk))].put(pk)
+
+                if time.time() - start >= reconnect_time:
+                    self.logger.info("reconnecting")
+
+                    start = time.time()
+
+                    poller.unregister(socket)
+                    socket = socket_compl
+                    poller.register(socket)
+
         except Exception as e:
             self.logger.exception(e)
         finally:
