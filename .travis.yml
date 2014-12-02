@@ -1,16 +1,15 @@
+language: python
+python: 3.4
 services:
   - mysql
-  - postgres
-  - redis-server
-language: python
-python:
-  - 2.7
-  - 3.3
-  - 3.4
-  - pypy
-  - pypy3
-install:
-  - pip install -e ".[dev]"
+env:
+  - TOXENV=flake8
+  - TOXENV=py27
+  - TOXENV=py33
+  - TOXENV=py34
+  - TOXENV=pypy
+before_install:
+  - pip install tox
 before_script:
   # enable row-based binlog
   - sudo touch /etc/mysql/conf.d/replication.cnf
@@ -22,5 +21,4 @@ before_script:
   - sudo chmod 700 /etc/mysql/conf.d/replication.cnf
   - sudo service mysql restart
 script:
-  - flake8 meepo tests
-  - py.test --capture=no
+  - tox -v
