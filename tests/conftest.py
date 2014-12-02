@@ -36,7 +36,6 @@ def mysql_dsn(conf):
         "mysql+pymysql://root@localhost/meepo_test"
 
     # init database
-
     parsed = urlparse(dsn)
     db_settings = {
         "host": parsed.hostname,
