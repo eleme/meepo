@@ -395,3 +395,75 @@ class RedisCacheReplicator(Replicator):
             else:
                 self.logger.error("msg corrupt -> %s" % msg)
                 continue
+
+
+class RqReplicator(Replicator):
+    """rq replicator
+    """
+
+    def __init__(self, listen=None, **kwargs):
+        super(RqReplicator, self).__init__(**kwargs)
+
+        self.listen = listen
+
+        self.topic_funcs = {}
+
+        # init zmq socket
+        self.socket = zmq_ctx.socket(zmq.SUB)
+
+    def event(self, *topics):
+        """Topic callback registry.
+        """
+        def wrapper(func):
+            for topic in topics:
+                self.topic_funcs[topic] = func
+
+                self.socket.setsockopt(zmq.SUBSCRIBE, asbytes(topic))
+            return func
+        return wrapper
+
+    def run(self):
+        """Run zmq replicator.
+        """
+        if isinstance(self.listen, list):
+            for i in self.listen:
+                self.socket.connect(i)
+        else:
+            self.socket.connect(self.listen)
+
+        error_pks = collections.defaultdict(set)
+
+        def do_job(topic, pks):
+            try:
+                self.topic_funcs[topic](pks)
+            except Exception as e:
+                self.logger.exception(e)
+                error_pks[topic].update(pks)
+            else:
+                # remove error pks
+                if topic in error_pks:
+                    error_pks[topic].difference_update(pks)
+                    if not error_pks[topic]:
+                        error_pks.pop(topic)
+
+        try:
+            while True:
+                # retry error pks
+                for t, p in list(error_pks.items()):
+                    do_job(t, p)
+
+                msg = self.socket.recv_string()
+
+                lst = msg.split()
+                if len(lst) == 2:
+                    topic, pks = lst[0], [lst[1], ]
+                elif len(lst) > 2:
+                    topic, pks = lst[0], lst[1:]
+                else:
+                    self.logger.error("msg corrupt -> %s" % msg)
+                    continue
+
+                self.logger.info("replicator: {0} -> {1}".format(topic, pks))
+                do_job(topic, pks)
+        except Exception as e:
+            self.logger.exception(e)
