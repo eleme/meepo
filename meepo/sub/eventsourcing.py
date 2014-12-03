@@ -115,5 +115,3 @@ def es_sub(redis_dsn, tables, namespace=None, ttl=3600*24*3):
         else:
             logger.warn("session_rollback failed -> %s" % sid)
     signal("session_rollback").connect(session_rollback_hook, weak=False)
-
-
