@@ -65,11 +65,11 @@ def main():
     dsn = "sqlite:///sa_demo.db"
     session = session_prepare(dsn)
 
-    from meepo.sub import print_sub
-    print_sub(["test"])
-
     from meepo.pub import sqlalchemy_pub
     sqlalchemy_pub(session)
+
+    from meepo.sub.dummy import print_sub
+    print_sub(["test"])
 
     sa_demo(session)
 

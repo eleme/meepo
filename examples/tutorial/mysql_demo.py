@@ -67,7 +67,7 @@ def main(mysql_dsn):
     # make sure the user has permission to read binlog
     mysql_dsn = mysql_dsn or "mysql+pymysql://root@localhost/meepo_test"
 
-    from meepo.sub import print_sub
+    from meepo.sub.dummy import print_sub
     print_sub(["test"])
 
     from meepo.pub import mysql_pub

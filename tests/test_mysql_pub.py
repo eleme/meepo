@@ -7,7 +7,6 @@ logging.basicConfig(level=logging.DEBUG)
 
 import pymysql
 import pytest
-
 from blinker import signal
 
 from meepo._compat import urlparse

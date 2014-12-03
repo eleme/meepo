@@ -5,8 +5,6 @@
     ~~~~~~~~~~~~~~~~
 
     Meepo Replicators based on events.
-
-    Replicate from database to targets.
 """
 
 import collections
@@ -19,7 +17,7 @@ from multiprocessing import Process, Queue
 import zmq
 from zmq.utils.strtypes import asbytes
 
-from ._compat import Empty
+from .._compat import Empty
 
 zmq_ctx = zmq.Context()
 

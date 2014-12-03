@@ -3,15 +3,15 @@
 from __future__ import absolute_import
 
 import logging
-import pytest
-
 logging.basicConfig(level=logging.DEBUG)
 
+import pytest
 from blinker import signal
-
 import sqlalchemy as sa
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.ext.declarative import declarative_base
+
+from meepo.pub import sqlalchemy_pub
 
 (t_writes, t_updates, t_deletes,
  s_events, s_commits, s_rollbacks) = ([] for _ in range(6))
@@ -73,9 +73,7 @@ def session(mysql_dsn):
     session = scoped_session(sessionmaker(bind=engine, expire_on_commit=False))
 
     # install sqlalchemy_pub hook
-    from meepo.pub import sqlalchemy_pub
     sqlalchemy_pub(session, strict_tables=["test"])
-
     return session
 
 
