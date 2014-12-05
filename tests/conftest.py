@@ -24,6 +24,13 @@ def conf():
             return json.load(f)
 
 
+@pytest.fixture(scope="session")
+def redis_dsn(conf):
+    """Redis server dsn
+    """
+    return conf["redis_dsn"] if conf else "redis://localhost:6379/0"
+
+
 @pytest.fixture(scope="module")
 def mysql_dsn(conf):
     """MySQL server dsn
