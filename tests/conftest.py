@@ -24,7 +24,7 @@ def conf():
             return json.load(f)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def mysql_dsn(conf):
     """MySQL server dsn
 
