@@ -25,12 +25,6 @@ Install with pip
 
     $ pip install meepo
 
-To use mysql binlog as event source, install additional requires with
-
-.. code:: bash
-
-    $ pip install meepo[mysqlbinlog]
-
 
 Features
 ========
@@ -51,8 +45,8 @@ be  used to do a lot of interesting things, including:
 - notifications pushing
 
 
-Intro
-=====
+Concept
+=======
 
 ``meepo`` is event sourcing and event broadcasting for databases, it follows
 database table events from ``sqlalchemy`` and ``mysql binlog``, and publish
