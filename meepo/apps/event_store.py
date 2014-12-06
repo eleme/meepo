@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-meepo.apps.eventstore
-~~~~~~~~~~~~~~~~~~~~~
+meepo.apps.event_store
+~~~~~~~~~~~~~~~~~~~~~~
 
 EventStore for EventSourcing feature in meepo.
 
@@ -23,16 +23,12 @@ and you have to retrieve latest data from database and do the following
 tasks next.
 """
 
-import datetime
 import logging
 import time
 
 import redis
 
-from meepo._compat import u
-
-
-_date = lambda ts: datetime.date.fromtimestamp(ts).strftime("%Y%m%d")
+from meepo.utils import s, d
 
 
 class MEventStore(object):
@@ -83,11 +79,10 @@ class MRedisEventStore(MEventStore):
         self.r = redis.StrictRedis.from_url(
             redis_dsn, socket_timeout=socket_timeout, **kwargs)
         self.ttl = ttl
-
         self.logger = logging.getLogger("meepo.redis_es")
 
         if namespace is None:
-            self.namespace = lambda ts: "meepo:redis_es:%s" % _date(ts)
+            self.namespace = lambda ts: "meepo:redis_es:%s" % d(ts, "%Y%m%d")
         elif isinstance(namespace, str):
             self.namespace = lambda ts: namespace
         elif callable(namespace):
@@ -133,11 +128,12 @@ class MRedisEventStore(MEventStore):
         """
         key = self._keygen(event, ts)
         try:
-            return bool(self._zadd(key, pk, ts, ttl))
+            self._zadd(key, pk, ts, ttl)
+            return True
         except redis.ConnectionError as e:
             # connection error typically happens when redis server can't be
             # reached or timed out, the error will be silent with an error
-            # log and return False.
+            # log and return None.
             self.logger.error(
                 "redis event store failed with connection error %r" % e)
             return False
@@ -158,6 +154,6 @@ class MRedisEventStore(MEventStore):
         elements = self.r.zrange(key, 0, -1, withscores=with_ts)
 
         if not with_ts:
-            return [u(e) for e in elements]
+            return [s(e) for e in elements]
         else:
-            return [(u(e[0]), int(e[1])) for e in elements]
+            return [(s(e[0]), int(e[1])) for e in elements]

@@ -9,7 +9,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 import pytest
 
-from meepo.apps.eventstore import MRedisEventStore
+from meepo.apps.event_store import MRedisEventStore
 
 
 @pytest.fixture(scope="function")
