@@ -13,7 +13,7 @@ import sqlalchemy as sa
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.ext.declarative import declarative_base
 
-from meepo.logutils import setup_logger
+from meepo.utils import setup_logger
 setup_logger()
 logger = logging.getLogger("meepo_examples.tutorial.sqlalchemy")
 

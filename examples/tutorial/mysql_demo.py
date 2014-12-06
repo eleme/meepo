@@ -12,7 +12,7 @@ import logging
 import click
 import pymysql
 
-from meepo.logutils import setup_logger
+from meepo.utils import setup_logger
 setup_logger()
 logger = logging.getLogger("meepo_examples.tutorial.mysql")
 
