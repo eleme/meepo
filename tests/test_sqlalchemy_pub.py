@@ -62,7 +62,7 @@ def session(mysql_dsn):
     session = scoped_session(sessionmaker(bind=engine, expire_on_commit=False))
 
     # install sqlalchemy_pub hook
-    sqlalchemy_pub(session, strict_tables=["test"])
+    sqlalchemy_pub(session, tables=["test"])
     return session
 
 

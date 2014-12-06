@@ -36,11 +36,18 @@ def setup_module(module):
     signal("test_delete").connect(test_sg(t_deletes), weak=False)
 
     # connect session action signal
-    def session_prepare(event, sid, action):
-        s_events.append({"event": event, "sid": sid, "action": action})
-    signal("session_prepare").connect(session_prepare, weak=False)
-    signal("session_commit").connect(test_sg(s_commits), weak=False)
-    signal("session_rollback").connect(test_sg(s_rollbacks), weak=False)
+    def test_session_prepare(session, event):
+        s_events.append({"sid": session.meepo_unique_id, "event": event})
+
+    def test_session_commit(session):
+        s_commits.append(session.meepo_unique_id)
+
+    def test_session_rollback(session):
+        s_rollbacks.append(session.meepo_unique_id)
+
+    signal("session_prepare").connect(test_session_prepare, weak=False)
+    signal("session_commit").connect(test_session_commit, weak=False)
+    signal("session_rollback").connect(test_session_rollback, weak=False)
 
 
 def teardown_module(module):
@@ -94,8 +101,7 @@ def test_sa_single_write(session, model_cls):
     session.commit()
 
     event, sid = s_events.pop(), s_commits.pop()
-    assert event == {
-        "sid": sid, "action": "write", "event": {"test": {t_a.id}}}
+    assert event == {"sid": sid, "event": {"test_write": {t_a.id}}}
 
     assert t_writes == [t_a.id]
     assert [t_updates, t_deletes, s_rollbacks] == [[]] * 3
@@ -110,8 +116,7 @@ def test_sa_single_flush_write(session, model_cls):
     session.commit()
 
     event, sid = s_events.pop(), s_commits.pop()
-    assert event == {
-        "sid": sid, "action": "write", "event": {"test": {t_b.id}}}
+    assert event == {"sid": sid, "event": {"test_write": {t_b.id}}}
 
     assert t_writes == [t_b.id]
     assert [t_updates, t_deletes, s_rollbacks] == [[]] * 3
@@ -126,9 +131,7 @@ def test_sa_multi_writes(session, model_cls):
     session.commit()
 
     event, sid = s_events.pop(), s_commits.pop()
-    assert event == {"sid": sid,
-                     "action": "write",
-                     "event": {"test": {t_c.id, t_d.id}}}
+    assert event == {"sid": sid, "event": {"test_write": {t_c.id, t_d.id}}}
 
     assert set(t_writes) == {t_c.id, t_d.id}
     assert [t_updates, t_deletes, s_rollbacks] == [[]] * 3
@@ -141,8 +144,7 @@ def test_sa_single_update(session, model_cls):
     session.commit()
 
     event, sid = s_events.pop(), s_commits.pop()
-    assert event == {
-        "sid": sid, "action": "update", "event": {"test": {t_a.id}}}
+    assert event == {"sid": sid, "event": {"test_update": {t_a.id}}}
 
     assert set(t_updates) == {t_a.id}
     assert [t_writes, t_deletes, s_rollbacks] == [[]] * 3
@@ -156,8 +158,7 @@ def test_sa_single_flush_update(session, model_cls):
     session.commit()
 
     event, sid = s_events.pop(), s_commits.pop()
-    assert event == {
-        "sid": sid, "action": "update", "event": {"test": {t_a.id}}}
+    assert event == {"sid": sid, "event": {"test_update": {t_a.id}}}
 
     assert set(t_updates) == {t_a.id}
     assert [t_writes, t_deletes, s_rollbacks] == [[]] * 3
@@ -185,19 +186,18 @@ def test_sa_mixed_write_update_delete_and_multi_flushes(session, model_cls):
     # one success commit generates one commit sid
     assert len(s_commits) == 1
 
-    # since the commit include a flush in it, if a flush happened in the middle
-    # of transaction, it will cause the same "session_prepare" events to be
-    # signaled multiple times.
-    assert s_events[:2] == s_events[2:4]
-
     # test session events
     sid = s_commits.pop()
-    assert s_events[2:] == [
-        {"sid": sid, "action": "write", "event": {"test": {t_e.id}}},
-        {"sid": sid, "action": "update", "event": {"test": {t_b.id}}},
-        {"sid": sid, "action": "delete", "event": {"test": {t_c.id}}}
-    ]
-    assert (t_writes, t_updates, t_deletes) == ([t_e.id], [t_b.id], [t_c.id])
+
+    # since the commit include a flush in it, two events will be triggered and
+    # the later event contains the first event.
+    assert s_events[0] == {"sid": sid,
+                           "event": {"test_write": {t_e.id},
+                                     "test_update": {t_b.id}}}
+    assert s_events[1] == {"sid": sid,
+                           "event": {"test_write": {t_e.id},
+                                     "test_update": {t_b.id},
+                                     "test_delete": {t_c.id}}}
 
 
 def test_sa_empty_rollback(session):
@@ -230,7 +230,6 @@ def test_sa_flush_rollback(session, model_cls):
     session.rollback()
 
     event, sid = s_events.pop(), s_rollbacks.pop()
-    assert event == {
-        "sid": sid, "action": "write", "event": {"test": {t_e.id}}}
+    assert event == {"sid": sid, "event": {"test_write": {t_e.id}}}
 
     assert [t_writes, t_updates, t_deletes, s_commits] == [[]] * 4

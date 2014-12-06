@@ -14,6 +14,8 @@ from sqlalchemy import event
 
 def _pk(obj):
     """Get pk values from object
+
+    :param obj: sqlalchemy object
     """
     pk_values = tuple(getattr(obj, c.name)
                       for c in obj.__mapper__.primary_key)
@@ -24,6 +26,13 @@ def _pk(obj):
 
 def _pub(obj, action):
     """Publish object pk values with action.
+
+    The _pub will trigger 2 signals:
+    * normal ``table_action`` signal, sends primary key
+    * raw ``table_action_raw`` signal, sends sqlalchemy object
+
+    :param obj: sqlalchemy object
+    :param action: action on object
     """
     sg_name = "{}_{}".format(obj.__table__, action)
     sg = signal(sg_name)
@@ -80,17 +89,17 @@ def _session_pub(session):
     session.pending_delete.clear()
 
 
-def sqlalchemy_pub(dbsession, strict_tables=None):
+def sqlalchemy_pub(session, tables=None):
     """SQLAlchemy Pub.
 
     This publisher don't publish events itself, it will hook on sqlalchemy's
     event system, and publish the changes automatically.
 
-    :param dbsession: sqlalchemy db session.
+    :param session: sqlalchemy db session.
     :param tables: which tables to enable sqlalchemy_pub.
     """
     # enable session_update hook
-    event.listen(dbsession, "before_flush", _session_update)
+    event.listen(session, "before_flush", _session_update)
 
     # enable simple session_commit hook
     def _session_commit(session):
@@ -101,10 +110,10 @@ def sqlalchemy_pub(dbsession, strict_tables=None):
 
         _session_pub(session)
         _session_del(session)
-    event.listen(dbsession, "after_commit", _session_commit)
+    event.listen(session, "after_commit", _session_commit)
 
 
-def sqlalchemy_es_pub(dbsession, tables=None):
+def sqlalchemy_es_pub(session, tables=None):
     """SQLAlchemy EventSourcing Pub.
 
     Add eventsourcing to sqlalchemy_pub, three more signals added for tables:
@@ -115,11 +124,11 @@ def sqlalchemy_es_pub(dbsession, tables=None):
     The hook will use prepare-commit pattern to ensure 100% reliability on
     event sourcing.
 
-    :param dbsession: sqlalchemy db session.
+    :param session: sqlalchemy session.
     :param tables: which tables to enable sqlalchemy_es_pub.
     """
     # enable session_update hook
-    event.listen(dbsession, "before_flush", _session_update)
+    event.listen(session, "before_flush", _session_update)
 
     # enable es session_prepare hook
     def _session_prepare(session, flush_ctx):
@@ -130,20 +139,16 @@ def sqlalchemy_es_pub(dbsession, tables=None):
 
         logger.debug("%s - after_flush" % session.meepo_unique_id)
 
+        evt = collections.defaultdict(set)
         for action in ("write", "update", "delete"):
-            objs = [o for o in getattr(session, "pending_%s" % action)
-                    if o.__table__.fullname in tables]
-            if not objs:
-                continue
-
-            prepare_event = collections.defaultdict(set)
-            for obj in objs:
-                prepare_event[obj.__table__.fullname].add(_pk(obj))
-            logger.debug("{} - session_prepare_{} -> {}".format(
-                session.meepo_unique_id, action, prepare_event))
-            signal("session_prepare").send(
-                prepare_event, sid=session.meepo_unique_id, action=action)
-    event.listen(dbsession, "after_flush", _session_prepare)
+            for obj in [o for o in getattr(session, "pending_%s" % action)
+                        if o.__table__.fullname in tables]:
+                evt_name = "%s_%s" % (obj.__table__.fullname, action)
+                evt[evt_name].add(_pk(obj))
+        logger.debug("%s - session_prepare %s -> %s".format(
+            session.meepo_unique_id, evt_name, evt))
+        signal("session_prepare").send(session, event=evt)
+    event.listen(session, "after_flush", _session_prepare)
 
     # enable es session_commit hook
     def _session_commit(session):
@@ -157,9 +162,9 @@ def sqlalchemy_es_pub(dbsession, tables=None):
         # normal session pub
         logger.debug("%s - after_commit" % session.meepo_unique_id)
         _session_pub(session)
-        signal("session_commit").send(session.meepo_unique_id)
+        signal("session_commit").send(session)
         _session_del(session)
-    event.listen(dbsession, "after_commit", _session_commit)
+    event.listen(session, "after_commit", _session_commit)
 
     # enable es session_rollback hook
     def session_rollback(session):
@@ -172,6 +177,6 @@ def sqlalchemy_es_pub(dbsession, tables=None):
 
         # del session meepo id after rollback
         logger.debug("%s - after_rollback" % session.meepo_unique_id)
-        signal("session_rollback").send(session.meepo_unique_id)
+        signal("session_rollback").send(session)
         _session_del(session)
-    event.listen(dbsession, "after_rollback", session_rollback)
+    event.listen(session, "after_rollback", session_rollback)
