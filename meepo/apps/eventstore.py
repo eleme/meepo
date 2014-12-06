@@ -24,6 +24,7 @@ tasks next.
 """
 
 import datetime
+import logging
 import time
 
 import redis
@@ -83,6 +84,8 @@ class MRedisEventStore(MEventStore):
             redis_dsn, socket_timeout=socket_timeout, **kwargs)
         self.ttl = ttl
 
+        self.logger = logging.getLogger("meepo.redis_es")
+
         if namespace is None:
             self.namespace = lambda ts: "meepo:redis_es:%s" % _date(ts)
         elif isinstance(namespace, str):
@@ -129,7 +132,15 @@ class MRedisEventStore(MEventStore):
         :return: bool
         """
         key = self._keygen(event, ts)
-        return bool(self._zadd(key, pk, ts, ttl))
+        try:
+            return bool(self._zadd(key, pk, ts, ttl))
+        except redis.ConnectionError as e:
+            # connection error typically happens when redis server can't be
+            # reached or timed out, the error will be silent with an error
+            # log and return False.
+            self.logger.error(
+                "redis event store failed with connection error %r" % e)
+            return False
 
     def query(self, event, ts=None):
         pass
