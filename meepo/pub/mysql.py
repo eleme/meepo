@@ -16,7 +16,7 @@ from pymysqlreplication.row_event import (
     WriteRowsEvent,
 )
 
-from .._compat import urlparse, text_types
+from .._compat import urlparse, str
 
 
 def mysql_pub(mysql_dsn, tables=None, blocking=False, **kwargs):
@@ -28,7 +28,7 @@ def mysql_pub(mysql_dsn, tables=None, blocking=False, **kwargs):
     :param tables: which tables to enable mysql_pub.
     :param blocking: whether mysql_pub should wait more binlog when all
     existing binlog processed.
-    :param kwargs: more kwargs to be passed to pymysqlreplication.
+    :param kwargs: more kwargs to be passed to binlog stream.
     """
     # parse mysql settings
     parsed = urlparse(mysql_dsn)
@@ -49,7 +49,7 @@ def mysql_pub(mysql_dsn, tables=None, blocking=False, **kwargs):
     )
 
     def _pk(values):
-        if isinstance(event.primary_key, text_types):
+        if isinstance(event.primary_key, str):
             return values[event.primary_key]
         return tuple(values[k] for k in event.primary_key)
 
