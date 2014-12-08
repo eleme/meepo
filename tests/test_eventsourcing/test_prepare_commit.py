@@ -19,7 +19,7 @@ def redis_strict_pc():
 
     We'll pass an error redis dsn here to make sure ConnectionError raised.
     """
-    redis_dsn = "redis://localhost:0/"
+    redis_dsn = "redis://non_exists:0/"
     pc = MRedisPrepareCommit(
         redis_dsn, strict=True, namespace="meepo.test.event_store")
     return pc
