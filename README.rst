@@ -49,4 +49,7 @@ should be row-based, since meepo only gives ``table_action pk`` events.
 Usage
 =====
 
-Checkout documentation and `examples/`.
+Checkout `documentation`_ and `examples/`_.
+
+.. _`documentation`: https://meepo.readthedocs.org/en/latest/
+.. _`examples/`: https://github.com/eleme/meepo/tree/develop/examples
