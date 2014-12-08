@@ -13,6 +13,8 @@ This documentation consists of two parts:
 2. Meepo Apps (`meepo.apps`). This part ships with eventsourcing and
    replicator apps for advanced use. You can refer to examples for demo.
 
+Meepo source code is hosted on Github: https://github.com/eleme/meepo
+
 Features
 ========
 
@@ -47,6 +49,22 @@ should be row-based, since meepo only gives ``table_action pk`` events.
    Meepo can only replicate row based data, which means it DO NOT replicate
    schema changes, or bulk operations.
 
+
+Installation
+============
+
+.. highlight:: bash
+
+:Requirements: **Python 2.x >= 2.7** or **Python 3.x >= 3.2** or **PyPy**
+
+To install the latest released version of Meepo::
+
+    $ pip install meepo
+
+
+Usage
+=====
+
 Meepo use signal to hook into the events of mysql binlog and sqlalchemy, the
 hook is very easy to install.
 
@@ -66,17 +84,6 @@ Hook with SQLAlchemy's events:
 
 Try out the demo scripts in ``example/tutorial`` for how meepo events works.
 
-
-Installation
-============
-
-.. highlight:: bash
-
-:Requirements: **Python 2.x >= 2.7** or **Python 3.x >= 3.2** or **PyPy**
-
-To install the latest released version of Meepo::
-
-    $ pip install meepo
 
 Meepo Pub
 =========
