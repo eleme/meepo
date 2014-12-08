@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import uuid
-
 import pytest
 import redis
 
@@ -26,14 +24,6 @@ def redis_strict_pc():
     pc = MRedisPrepareCommit(
         redis_dsn, strict=True, namespace="meepo.test.event_store")
     return pc
-
-
-@pytest.fixture(scope="module")
-def mock_session():
-    class MockSession(object):
-        def __init__(self):
-            self.meepo_unique_id = uuid.uuid4().hex
-    return MockSession()
 
 
 def test_redis_prepare_commit_phase(mock_session, redis_pc):

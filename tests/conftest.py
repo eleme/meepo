@@ -7,9 +7,11 @@ logging.basicConfig(level=logging.DEBUG)
 
 import json
 import os
+import uuid
 
 import pymysql
 import pytest
+import redis
 
 from meepo._compat import urlparse
 
@@ -25,10 +27,16 @@ def conf():
 
 
 @pytest.fixture(scope="session")
-def redis_dsn(conf):
+def redis_dsn(request, conf):
     """Redis server dsn
     """
-    return conf["redis_dsn"] if conf else "redis://localhost:6379/0"
+    redis_dsn = conf["redis_dsn"] if conf else "redis://localhost:6379/1"
+
+    def fin():
+        r = redis.Redis.from_url(redis_dsn, socket_timeout=1)
+        r.flushdb()
+    request.addfinalizer(fin)
+    return redis_dsn
 
 
 @pytest.fixture(scope="module")
@@ -72,3 +80,11 @@ def mysql_dsn(conf):
     conn.close()
 
     return dsn
+
+
+@pytest.fixture(scope="module")
+def mock_session():
+    class MockSession(object):
+        def __init__(self):
+            self.meepo_unique_id = uuid.uuid4().hex
+    return MockSession()
