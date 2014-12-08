@@ -1,10 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""
-    meepo.replicator
-    ~~~~~~~~~~~~~~~~
-
-    Meepo Replicators based on events.
+"""Meepo Replicators based on events.
 """
 
 import collections

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-meepo.apps.eventsourcing.sub
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+EventSourcing - Sub
+-------------------
 
 Subs for meepo eventsourcing app.
 """

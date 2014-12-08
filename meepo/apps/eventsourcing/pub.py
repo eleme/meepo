@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-meepo.apps.eventsourcing.pub
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+EventSourcing - Pub
+-------------------
 
 Pubs for meepo eventsourcing app.
 """
@@ -24,8 +24,8 @@ class MSQLAlchemyEventSourcingPub(MSQLAlchemyPub):
 
     Add eventsourcing to sqlalchemy_pub, three more signals added for tables:
 
-        session_prepare
-        session_commit / session_rollback
+    * session_prepare
+    * session_commit / session_rollback
 
     The hook will use prepare-commit pattern to ensure 100% reliability on
     event sourcing.
@@ -34,10 +34,14 @@ class MSQLAlchemyEventSourcingPub(MSQLAlchemyPub):
 
     @classmethod
     def session_prepare(cls, session, _):
-        """Record session prepare state in before_commit
+        """Send session_prepare signal in session "before_commit".
+
+        The signal contains another event argument, which records whole info
+        of what's changed in this session, so the signal receiver can receive
+        and record the event.
         """
         if not hasattr(session, 'meepo_unique_id'):
-            cls.session_init(session)
+            cls._session_init(session)
 
         tables = getattr(session, "_meepo_sqlalchemy_es_pub_tables", [])
         evt = collections.defaultdict(set)
@@ -55,7 +59,10 @@ class MSQLAlchemyEventSourcingPub(MSQLAlchemyPub):
 
     @classmethod
     def session_commit(cls, session):
-        """Commit session in after_commit
+        """Send session_commit signal in sqlalchemy "before_commit".
+
+        This marks the success of session so the session may enter commit
+        state.
         """
         # this may happen when there's nothing to commit
         if not hasattr(session, 'meepo_unique_id'):
@@ -64,13 +71,16 @@ class MSQLAlchemyEventSourcingPub(MSQLAlchemyPub):
 
         # normal session pub
         cls.logger.debug("%s - session_commit" % session.meepo_unique_id)
-        cls.session_pub(session)
+        cls._session_pub(session)
         signal("session_commit").send(session)
-        cls.session_del(session)
+        cls._session_del(session)
 
     @classmethod
     def session_rollback(cls, session):
-        """Clean session in after_rollback.
+        """Send session_rollback signal in sqlalchemy "after_rollback".
+
+        This marks the failure of session so the session may enter commit
+        phase.
         """
         # this may happen when there's nothing to rollback
         if not hasattr(session, 'meepo_unique_id'):
@@ -80,11 +90,11 @@ class MSQLAlchemyEventSourcingPub(MSQLAlchemyPub):
         # del session meepo id after rollback
         cls.logger.debug("%s - after_rollback" % session.meepo_unique_id)
         signal("session_rollback").send(session)
-        cls.session_del(session)
+        cls._session_del(session)
 
     @classmethod
     def install(cls, session, tables=None):
-        """Install hook
+        """Install sqlalchemy eventsourcing hooks.
 
         :param session: sqlalchemy session to install the hook
         :param tables: tables to install the hook, leave None to pub all.

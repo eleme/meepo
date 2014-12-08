@@ -1,13 +1,11 @@
 # -*- coding: utf-8 -*-
 
 """
-meepo.apps.eventsourcing.prepare_commit
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+EventSourcing - PrepareCommit
+-----------------------------
 
-Prepare Commit feature for meepo events. (Also known as Two-Phase Commit)
-
-For basic concept about two phase commit, refer to
-http://en.wikipedia.org/wiki/Two-phase_commit_protocol
+Prepare Commit also known as Two-Phase Commit, for basic concept about it,
+refer to http://en.wikipedia.org/wiki/Two-phase_commit_protocol
 
 The two phase commit feature implemented in meepo is used to make sure event
 100% reliably recorded in eventsourcing, and it's not a strict traditional
@@ -77,22 +75,20 @@ class MRedisPrepareCommit(MPrepareCommit):
 
     This prepare commit records sqlalchemy session, and should be used with
     meepo.pub.sqlalchemy_es_pub.
+
+    :param redis_dsn: the redis instance uri
+    :param strict: by default the exceptions happened in middle of
+     prepare-commit will only be caught and logged as error, but the
+     process continue to execute. If strict set to True, the exception
+     will be  raised to outside.
+    :param namespace: namespace string or namespace func. if func passed,
+     it should accepts timestamp as arg and return string namespace.
+    :param ttl: expiration time for events stored, default to 1 day.
+    :param socket_timeout: redis socket timeout
+    :param kwargs: kwargs to be passed to redis instance init func.
     """
     def __init__(self, redis_dsn, strict=False, namespace=None, ttl=3600*24,
                  socket_timeout=1, **kwargs):
-        """Init MRedisPrepareCommit
-
-        :param redis_dsn: the redis instance uri
-        :param strict: by default the exceptions happened in middle of
-         prepare-commit will only be caught and logged as error, but the
-         process continue to execute. If strict set to True, the exception
-         will be  raised to outside.
-        :param namespace: namespace string or namespace func. if func passed,
-         it should accepts timestamp as arg and return string namespace.
-        :param ttl: expiration time for events stored, default to 1 day.
-        :param socket_timeout: redis socket timeout
-        :param kwargs: kwargs to be passed to redis instance init func.
-        """
         super(MRedisPrepareCommit, self).__init__()
 
         self.r = redis.StrictRedis.from_url(

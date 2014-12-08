@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-meepo.apps.eventsourcing.event_store
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-EventStore for EventSourcing feature in meepo.
+EventSourcing - EventStore
+--------------------------
 
 For basic concept about eventsourcing, refer to
 http://martinfowler.com/eaaDev/EventSourcing.html
@@ -49,7 +47,16 @@ class MRedisEventStore(MEventStore):
 
     .. note::
 
-        this redis event store class is compat with twemproxy.
+        The redis event store class is compat with twemproxy.
+
+    :param redis_dsn: the redis instance uri
+    :param namespace: namespace func for event key, the func should accept
+     event timestamp and return namespace of the func. namespace also
+     accepts str type arg, which will always return the same namespace
+     for all timestamps.
+    :param ttl: expiration time for events stored, default to 3 days.
+    :param socket_timeout: redis socket timeout
+    :param kwargs: kwargs to be passed to redis instance init func.
     """
 
     LUA_TIME = "return tonumber(redis.call('TIME')[1])"
@@ -65,17 +72,6 @@ class MRedisEventStore(MEventStore):
 
     def __init__(self, redis_dsn, namespace=None, ttl=3600*24*3,
                  socket_timeout=1, **kwargs):
-        """Init MRedisEventStore
-
-        :param redis_dsn: the redis instance uri
-        :param namespace: namespace func for event key, the func should accept
-         event timestamp and return namespace of the func. namespace also
-         accepts str type arg, which will always return the same namespace
-         for all timestamps.
-        :param ttl: expiration time for events stored, default to 3 days.
-        :param socket_timeout: redis socket timeout
-        :param kwargs: kwargs to be passed to redis instance init func.
-        """
         super(MRedisEventStore, self).__init__()
 
         self.r = redis.StrictRedis.from_url(
@@ -143,10 +139,8 @@ class MRedisEventStore(MEventStore):
     def replay(self, event, ts=0, end_ts=None, with_ts=False):
         """Replay events based on timestamp.
 
-        .. note::
-
-            if you split namespace with ts, the replay will only return events
-            within the same namespace.
+        If you split namespace with ts, the replay will only return events
+        within the same namespace.
 
         :param event: event name
         :param ts: replay events after ts, default from 0.
