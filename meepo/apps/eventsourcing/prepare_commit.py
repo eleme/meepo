@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-meepo.apps.prepare_commit
-~~~~~~~~~~~~~~~~~~~~~~~~~
+meepo.apps.eventsourcing.prepare_commit
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Prepare Commit feature for meepo events. (Also known as Two-Phase Commit)
 
@@ -18,6 +18,8 @@ should only be used in combination of sqlalchemy_es_pub, which ships with
 session prepare-commit signals.
 """
 
+from __future__ import absolute_import
+
 import functools
 import logging
 import pickle
@@ -25,7 +27,7 @@ import time
 
 import redis
 
-from meepo.utils import d, s
+from ...utils import d, s
 
 
 class MPrepareCommit(object):
@@ -61,7 +63,7 @@ def _redis_strict_pc(func):
         except Exception as e:
             if self.strict:
                 raise
-            if isinstance(redis.ConnectionError):
+            if isinstance(e, redis.ConnectionError):
                 self.logger.warn("redis connection error in %s: %s" % (
                     phase, session.meepo_unique_id))
             else:

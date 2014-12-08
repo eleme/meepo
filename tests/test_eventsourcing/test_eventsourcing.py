@@ -2,9 +2,9 @@
 
 from blinker import signal
 
-from meepo.sub.eventsourcing import redis_es_sub
-from meepo.apps.event_store import MRedisEventStore
-from meepo.apps.prepare_commit import MRedisPrepareCommit
+from meepo.apps.eventsourcing.prepare_commit import MRedisPrepareCommit
+from meepo.apps.eventsourcing.sub import redis_es_sub
+from meepo.apps.eventsourcing.event_store import MRedisEventStore
 
 
 def test_redis_es_sub_commit(redis_dsn, mock_session):

@@ -1,14 +1,23 @@
 # -*- coding: utf-8 -*-
 
+"""
+meepo.apps.eventsourcing.sub
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Subs for meepo eventsourcing app.
+"""
+
+from __future__ import absolute_import
+
 import datetime
 import functools
-import logging
 import itertools
+import logging
 
 from blinker import signal
 
-from meepo.apps.prepare_commit import MRedisPrepareCommit
-from meepo.apps.event_store import MRedisEventStore
+from .event_store import MRedisEventStore
+from .prepare_commit import MRedisPrepareCommit
 
 
 def redis_es_sub(tables, redis_dsn, strict=False, namespace=None,

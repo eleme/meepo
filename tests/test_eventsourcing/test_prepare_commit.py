@@ -2,8 +2,7 @@
 
 import pytest
 import redis
-
-from meepo.apps.prepare_commit import MRedisPrepareCommit
+from meepo.apps.eventsourcing.prepare_commit import MRedisPrepareCommit
 
 
 @pytest.fixture(scope="module")

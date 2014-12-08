@@ -11,7 +11,7 @@ import sqlalchemy as sa
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.ext.declarative import declarative_base
 
-from meepo.pub import sqlalchemy_es_pub
+from meepo.apps.eventsourcing import sqlalchemy_es_pub
 
 (t_writes, t_updates, t_deletes,
  s_events, s_commits, s_rollbacks) = ([] for _ in range(6))

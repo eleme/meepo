@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-meepo.apps.event_store
-~~~~~~~~~~~~~~~~~~~~~~
+meepo.apps.eventsourcing.event_store
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 EventStore for EventSourcing feature in meepo.
 
@@ -23,12 +23,14 @@ and you have to retrieve latest data from database and do the following
 tasks next.
 """
 
+from __future__ import absolute_import
+
 import logging
 import time
 
 import redis
 
-from meepo.utils import s, d
+from ...utils import s, d
 
 
 class MEventStore(object):
