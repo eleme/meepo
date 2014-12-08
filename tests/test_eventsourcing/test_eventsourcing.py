@@ -34,7 +34,7 @@ def test_redis_es_sub_commit(mock_session, es_sub):
     assert prepare_commit.prepare_info() == set()
 
     signal("test_write").send(1)
-    assert event_store.get_all("test_write") == ['1']
+    assert event_store.replay("test_write") == ['1']
 
 
 def test_redis_es_sub_rollback(mock_session, es_sub):
@@ -51,4 +51,4 @@ def test_redis_es_sub_rollback(mock_session, es_sub):
     assert prepare_commit.phase(mock_session) == "commit"
     assert prepare_commit.prepare_info() == set()
 
-    assert event_store.get_all("test_write") == []
+    assert event_store.replay("test_write") == []

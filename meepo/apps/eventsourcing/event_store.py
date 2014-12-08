@@ -140,17 +140,24 @@ class MRedisEventStore(MEventStore):
                 "redis event store failed with connection error %r" % e)
             return False
 
-    def get_all(self, event, ts=None, with_ts=False):
-        """Get all primary keys of an event.
+    def replay(self, event, ts=0, end_ts=None, with_ts=False):
+        """Replay events based on timestamp.
+
+        .. note::
+
+            if you split namespace with ts, the replay will only return events
+            within the same namespace.
 
         :param event: event name
-        :param ts: timestamp used locate the namespace
-        :param with_ts: whether the timestamp of event should be returned
+        :param ts: replay events after ts, default from 0.
+        :param end_ts: replay events to ts, default to "+inf".
+        :param with_ts: return timestamp with events, default to False.
         :return: list of pks when with_ts set to False, list of (pk, ts) tuples
          when with_ts is True.
         """
         key = self._keygen(event, ts)
-        elements = self.r.zrange(key, 0, -1, withscores=with_ts)
+        end_ts = end_ts if end_ts else "+inf"
+        elements = self.r.zrangebyscore(key, ts, end_ts, withscores=with_ts)
 
         if not with_ts:
             return [s(e) for e in elements]
