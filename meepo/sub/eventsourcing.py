@@ -3,115 +3,62 @@
 import datetime
 import functools
 import logging
+import itertools
 
 from blinker import signal
-import redis
 
-from .._compat import pickle
+from meepo.apps.prepare_commit import MRedisPrepareCommit
+from meepo.apps.event_store import MRedisEventStore
 
 
-def es_sub(redis_dsn, tables, namespace=None, ttl=3600*24*3):
-    """EventSourcing subscriber.
+def redis_es_sub(tables, redis_dsn, strict=False, namespace=None,
+                 ttl=3600*24*3, socket_timeout=1):
+    """Redis EventSourcing sub.
 
-    This subscriber will use redis as event sourcing storage layer.
+    This sub should be used together with sqlalchemy_es_pub, it will
+    use MRedisEventStore as events storage layer and use the prepare-commit
+    pattern in sqlalchemy_es_pub to ensure 100% security on events recording.
 
-    Note here we only needs a 'weak' event sourcing, we only record primary
-    keys with lastest change timestamp, which means we only care about
-    what event happend after some time, and ignore how many times it happens.
+    :param tables: tables to be event sourced.
+    :param redis_dsn: the redis server to store event sourcing events.
+    :param strict: arg to be passed to MRedisPrepareCommit. If set to True,
+     the exception will not be silent and may cause the failure of sqlalchemy
+     transaction, user should handle the exception in the app side in this
+     case.
+    :param namespace: namespace string or func. If func passed, it should
+     accept timestamp as arg and return a string namespace.
+    :param ttl: expiration time for events stored, default to 3 days.
+    :param socket_timeout: redis socket timeout.
     """
     logger = logging.getLogger("meepo.sub.es_sub")
 
-    # we may accept function as namespace so we could dynamically generate it.
-    # if namespace provided as string, the function return the string.
-    # elif namespace not provided, generate namespace dynamically by today.
-    if not callable(namespace):
-        namespace = lambda: namespace if namespace else \
-            "meepo:es:{}".format(datetime.date.today())
+    if not isinstance(tables, list):
+        raise ValueError("tables should be list")
 
-    r = redis.StrictRedis.from_url(
-        redis_dsn, socket_timeout=1, socket_connect_timeout=0.1)
+    # install event_store hook for tables
+    event_store = MRedisEventStore(
+        redis_dsn, namespace=namespace, ttl=ttl, socket_timeout=socket_timeout)
+    event_store.logger = logger
 
-    LUA_ZADD = ' '.join("""
-    local score = redis.call('ZSCORE', KEYS[1], ARGV[2])
-    if score and tonumber(ARGV[1]) <= tonumber(score) then
-        return 0
-    else
-        redis.call('ZADD', KEYS[1], ARGV[1], ARGV[2])
-        return 1
-    end
-    """.split())
-    r_time = lambda: r.eval("return tonumber(redis.call('TIME')[1])", 1, 1)
-    r_zadd = lambda k, pk: r.eval(LUA_ZADD, 1, k, r_time(), pk)
-
-    for table in set(tables):
-        def _sub(action, pk, table=table):
-            key = "%s:%s_%s" % (namespace(), table, action)
-            try:
-                if r_zadd(key, str(pk)):
-                    logger.info("%s_%s: %s -> %s" % (
-                        table, action, pk,
-                        datetime.datetime.now()))
-                else:
-                    logger.info("%s_%s: %s -> skip" % (table, action, pk))
-            except redis.ConnectionError:
-                logger.error("event sourcing failed: %s" % pk)
-            except Exception as e:
-                logger.exception(e)
-
-        signal("%s_write" % table).connect(
-            functools.partial(_sub, "write"), weak=False)
-        signal("%s_update" % table).connect(
-            functools.partial(_sub, "update"), weak=False)
-        signal("%s_delete" % table).connect(
-            functools.partial(_sub, "delete"), weak=False)
-
-    def _clean_sid(sid):
-        sp_all = "%s:session_prepare" % namespace()
-        sp_key = "%s:session_prepare:%s" % (namespace(), sid)
-        try:
-            with r.pipeline(transaction=False) as p:
-                p.srem(sp_all, sid)
-                p.expire(sp_key, 60 * 60)
-                p.execute()
-            return True
-        except redis.ConnectionError:
-            logger.warn(
-                "redis connection error in session commit/rollback: %s" %
-                sid)
-            return False
-        except Exception as e:
-            logger.exception(e)
-            return False
-
-    # session hooks for strict prepare-commit pattern
-    def session_prepare_hook(event, sid, action):
-        """Record session prepare state.
-        """
-        sp_all = "%s:session_prepare" % namespace()
-        sp_key = "%s:session_prepare:%s" % (namespace(), sid)
-
-        try:
-            with r.pipeline(transaction=False) as p:
-                p.sadd(sp_all, sid)
-                p.hset(sp_key, action, pickle.dumps(event))
-                p.execute()
-            logger.info("session_prepare %s -> %s" % (action, sid))
-        except redis.ConnectionError:
-            logger.warn("redis connection error in session prepare: %s" % sid)
-        except Exception as e:
-            logger.exception(e)
-    signal("session_prepare").connect(session_prepare_hook, weak=False)
-
-    def session_commit_hook(sid):
-        if _clean_sid(sid):
-            logger.info("session_commit -> %s" % sid)
+    def _es_event_sub(pk, event):
+        if event_store.add(event, str(pk)):
+            logger.info("%s: %s -> %s" % (
+                event, pk, datetime.datetime.now()))
         else:
-            logger.warn("session_commit failed -> %s" % sid)
-    signal("session_commit").connect(session_commit_hook, weak=False)
+            logger.error("event sourcing failed: %s" % pk)
 
-    def session_rollback_hook(sid):
-        if _clean_sid(sid):
-            logger.info("session_rollback -> %s" % sid)
-        else:
-            logger.warn("session_rollback failed -> %s" % sid)
-    signal("session_rollback").connect(session_rollback_hook, weak=False)
+    events = ("%s_%s" % (tb, action) for tb, action in
+              itertools.product(*[tables, ["write", "update",  "delete"]]))
+    for event in events:
+        sub_func = functools.partial(_es_event_sub, event=event)
+        signal(event).connect(sub_func, weak=False)
+
+    # install prepare-commit hook
+    prepare_commit = MRedisPrepareCommit(
+        redis_dsn, strict=strict, namespace=namespace,
+        ttl=ttl, socket_timeout=socket_timeout)
+    prepare_commit.logger = logger
+
+    signal("session_prepare").connect(prepare_commit.prepare, weak=False)
+    signal("session_commit").connect(prepare_commit.commit, weak=False)
+    signal("session_rollback").connect(prepare_commit.rollback, weak=False)
