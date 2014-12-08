@@ -22,4 +22,4 @@ else:
     import cPickle as pickle
 
     bytes = str
-    str = unicode
+    str = unicode  # noqa
