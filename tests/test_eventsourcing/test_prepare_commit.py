@@ -32,13 +32,13 @@ def test_redis_prepare_commit_phase(mock_session, redis_pc):
 
     # test prepare phase recorded
     assert redis_pc.phase(mock_session) == "prepare"
-    assert redis_pc.get_prepare_info() == {mock_session.meepo_unique_id}
-    assert redis_pc.get_session_info(mock_session) == event
+    assert redis_pc.prepare_info() == {mock_session.meepo_unique_id}
+    assert redis_pc.session_info(mock_session) == event
 
     # test commit phase recorded
     redis_pc.commit(mock_session)
     assert redis_pc.phase(mock_session) == "commit"
-    assert redis_pc.get_prepare_info() == set()
+    assert redis_pc.prepare_info() == set()
 
 
 def test_redis_strict_prepare_commit_phase(mock_session, redis_strict_pc):

@@ -15,7 +15,7 @@ def zmq_sub(bind, tables, forwarder=False, green=False):
     :param forwarder: set to True if zmq pub to a forwarder device.
     :param green: weather to use a greenlet compat zmq
     """
-    logger = logging.getLogger("meepo.sub.nano_sub")
+    logger = logging.getLogger("meepo.sub.zmq_sub")
 
     if not green:
         import zmq
@@ -40,3 +40,5 @@ def zmq_sub(bind, tables, forwarder=False, green=False):
 
     for table in set(tables):
         _sub(table)
+
+    return socket

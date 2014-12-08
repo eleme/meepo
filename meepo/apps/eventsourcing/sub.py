@@ -39,15 +39,14 @@ def redis_es_sub(tables, redis_dsn, strict=False, namespace=None,
     :param ttl: expiration time for events stored, default to 3 days.
     :param socket_timeout: redis socket timeout.
     """
-    logger = logging.getLogger("meepo.sub.es_sub")
+    logger = logging.getLogger("meepo.apps.eventsourcing.redis_es_sub")
 
     if not isinstance(tables, list):
         raise ValueError("tables should be list")
 
-    # install event_store hook for tables
+    # install event store hook for tables
     event_store = MRedisEventStore(
         redis_dsn, namespace=namespace, ttl=ttl, socket_timeout=socket_timeout)
-    event_store.logger = logger
 
     def _es_event_sub(pk, event):
         if event_store.add(event, str(pk)):
@@ -65,9 +64,10 @@ def redis_es_sub(tables, redis_dsn, strict=False, namespace=None,
     # install prepare-commit hook
     prepare_commit = MRedisPrepareCommit(
         redis_dsn, strict=strict, namespace=namespace,
-        ttl=ttl, socket_timeout=socket_timeout)
-    prepare_commit.logger = logger
+        socket_timeout=socket_timeout)
 
     signal("session_prepare").connect(prepare_commit.prepare, weak=False)
     signal("session_commit").connect(prepare_commit.commit, weak=False)
     signal("session_rollback").connect(prepare_commit.rollback, weak=False)
+
+    return event_store, prepare_commit

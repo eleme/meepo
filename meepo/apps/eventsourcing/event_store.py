@@ -140,9 +140,6 @@ class MRedisEventStore(MEventStore):
                 "redis event store failed with connection error %r" % e)
             return False
 
-    def query(self, event, ts=None):
-        pass
-
     def get_all(self, event, ts=None, with_ts=False):
         """Get all primary keys of an event.
 
@@ -159,3 +156,11 @@ class MRedisEventStore(MEventStore):
             return [s(e) for e in elements]
         else:
             return [(s(e[0]), int(e[1])) for e in elements]
+
+    def clear(self, event, ts=None):
+        """Clear all stored record of event.
+
+        :param event: event name to be cleared.
+        :param ts: timestamp used locate the namespace
+        """
+        return self.r.delete(self._keygen(event, ts))

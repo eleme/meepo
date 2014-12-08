@@ -155,7 +155,7 @@ class MRedisPrepareCommit(MPrepareCommit):
     # we don't need to specially deal with rollback in this phase
     rollback = commit
 
-    def get_session_info(self, session):
+    def session_info(self, session):
         """Return all session unique ids recorded in prepare phase.
 
         :param ts: timestamp, default to current timestamp
@@ -166,7 +166,7 @@ class MRedisPrepareCommit(MPrepareCommit):
         event = {s(k): pickle.loads(v) for k, v in picked_event.items()}
         return event
 
-    def get_prepare_info(self, ts=None):
+    def prepare_info(self, ts=None):
         """Return all session unique ids recorded in prepare phase.
 
         :param ts: timestamp, default to current timestamp
@@ -174,3 +174,11 @@ class MRedisPrepareCommit(MPrepareCommit):
         """
         sp_key = "%s:session_prepare" % self.namespace(ts or int(time.time()))
         return set(s(m) for m in self.r.smembers(sp_key))
+
+    def clear(self, ts=None):
+        """Clear all session in prepare phase.
+
+        :param ts: timestamp used locate the namespace
+        """
+        sp_key = "%s:session_prepare" % self.namespace(ts or int(time.time()))
+        return self.r.delete(sp_key)

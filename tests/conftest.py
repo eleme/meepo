@@ -82,7 +82,7 @@ def mysql_dsn(conf):
     return dsn
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def mock_session():
     class MockSession(object):
         def __init__(self):
