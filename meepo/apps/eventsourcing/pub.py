@@ -1,12 +1,5 @@
 # -*- coding: utf-8 -*-
 
-"""
-EventSourcing - Pub
--------------------
-
-Pubs for meepo eventsourcing app.
-"""
-
 from __future__ import absolute_import
 
 import logging
@@ -24,8 +17,8 @@ class MSQLAlchemyEventSourcingPub(MSQLAlchemyPub):
 
     Add eventsourcing to sqlalchemy_pub, three more signals added for tables:
 
-    * session_prepare
-    * session_commit / session_rollback
+    * ``session_prepare``
+    * ``session_commit`` / ``session_rollback``
 
     The hook will use prepare-commit pattern to ensure 100% reliability on
     event sourcing.
@@ -59,7 +52,7 @@ class MSQLAlchemyEventSourcingPub(MSQLAlchemyPub):
 
     @classmethod
     def session_commit(cls, session):
-        """Send session_commit signal in sqlalchemy "before_commit".
+        """Send session_commit signal in sqlalchemy ``before_commit``.
 
         This marks the success of session so the session may enter commit
         state.
@@ -77,7 +70,7 @@ class MSQLAlchemyEventSourcingPub(MSQLAlchemyPub):
 
     @classmethod
     def session_rollback(cls, session):
-        """Send session_rollback signal in sqlalchemy "after_rollback".
+        """Send session_rollback signal in sqlalchemy ``after_rollback``.
 
         This marks the failure of session so the session may enter commit
         phase.

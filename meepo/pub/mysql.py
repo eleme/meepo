@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 
 """
-MySQL Pub
----------
-
 The mysql pub will use the ``python-mysql-replication`` binlog stream as the
 source of events.
 
@@ -53,6 +50,8 @@ from .._compat import urlparse, str
 def mysql_pub(mysql_dsn, tables=None, blocking=False, **kwargs):
     """MySQL row-based binlog events pub.
 
+    **General Usage**
+
     Listen and pub all tables events::
 
         mysql_pub(mysql_dsn)
@@ -76,6 +75,8 @@ def mysql_pub(mysql_dsn, tables=None, blocking=False, **kwargs):
 
         mysql_pub(mysql_dsn, blocking=True, server_id=1024)
 
+    **Signals Illustrate**
+
     Sometimes you want more info than the pk value, the mysql_pub expose
     a raw signal which will send the original binlog stream events.
 
@@ -88,6 +89,8 @@ def mysql_pub(mysql_dsn, tables=None, blocking=False, **kwargs):
 
         signal("test_write").send(1)
         signal("test_write_raw").send({'values': {'data': 'a', 'id': 1}})
+
+    **Binlog Pos Signal**
 
     The mysql_pub has a unique signal ``mysql_binlog_pos`` which contains
     the binlog file and binlog pos, you can record the signal and resume

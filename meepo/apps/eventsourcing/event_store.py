@@ -1,26 +1,5 @@
 # -*- coding: utf-8 -*-
 
-"""
-EventSourcing - EventStore
---------------------------
-
-For basic concept about eventsourcing, refer to
-http://martinfowler.com/eaaDev/EventSourcing.html
-
-The eventsourcing implemented in meepo is a simplified version of es, it only
-records what has changed since a timestamp, but not the diffs.
-
-So you only get a list of primary keys when query with a timestamp::
-
-    order_update 102 27 59 43
-
-Why is it? Because event sourcing is hard in distributed system, you can't
-give a accurate answer of events happening order. So we only keep a record
-that it happened since some timestamp, then you know the data has gone stale,
-and you have to retrieve latest data from database and do the following
-tasks next.
-"""
-
 from __future__ import absolute_import
 
 import logging
@@ -44,6 +23,55 @@ class MEventStore(object):
 
 class MRedisEventStore(MEventStore):
     """EventStore based on redis.
+
+    The event store use namespace and event name as key and store primary
+    keys using redis sorted set, with event timestamp as score.
+
+    **General Usage**
+
+    Init event store with redis_dsn::
+
+        event_store = MRedisEventStore("redis://localhost/", "store")
+
+    You can also pass a function to namespace, it'll accept timestamp as
+    arg, this can be used to separate events store based on hour, day or
+    week etc.::
+
+        event_store = MRedisEventStore(
+            "redis://localhost/", lambda ts: "store:%s" % d(ts, "%Y%m%d"))
+
+    Add a event with::
+
+        event_store.add("test_write", 1)
+
+    Or add a event with timestamp passed in::
+
+        event_store.add("test_write", 2, ts=1024)
+
+    Clear all records of an event within a namespace::
+
+        event_store.clear("test_write")
+
+    **Events Replay**
+
+    One important feature for eventsourcing is replay, it can replay what has
+    changed and the latest update timestamp of events.
+
+    Replay all records of an event within a namespace::
+
+        event_store.replay("test_write")
+
+    Or replay all records since timestamp::
+
+        # all events since timestamp 1024
+        event_store.replay("test_write", ts=1024)
+
+        # all events between timestamp 1024 and now
+        event_store.replay("test_write", ts=1024, end_ts=time.time())
+
+    You can also replay all events with it's latest updating time::
+
+        event_store.replay("test_write", with_ts=True)
 
     .. note::
 

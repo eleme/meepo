@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 
 """
-SQLAlchemy Pub
---------------
-
 The sqlalchemy pub will hook into SQLAlchemy's event system, shape and publish
 events with ``table_action pk`` style.
 
@@ -54,19 +51,27 @@ class MSQLAlchemyPub(object):
 
     The install method will add 2 hooks on sqlalchemy events system:
 
-    * session_update -> sqlalchemy - before_flush
-    * session_commit -> sqlalchemy - after_commit
+    * ``session_update`` -> sqlalchemy - ``before_flush``
+    * ``session_commit`` -> sqlalchemy - ``after_commit``
 
     The ``session_update`` method need to record the model states in
     sqlalchemy "before_flush" event, when the session records the status
     with ``session.new``, ``session.dirty`` and ``session.deleted``, these
     states will be deleted in "after_commit" event.
 
+    **General Usage**
+
     Install the sqlalchemy pub hook by calling it on sqlalchemy session::
 
         sqlalchemy_pub(session)
 
-    Then use the session as usable and the events will be available.
+    Only listen some tables::
+
+        sqlalchemy_pub(session, tables=["test"])
+
+    Then use the session as usual and the events will be available.
+
+    **Signals Illustrate**
 
     Sometimes you want more info than the pk value, the sqlalchemy_pub expose
     a raw signal which will send the original sqlalchemy objects.
@@ -89,8 +94,8 @@ class MSQLAlchemyPub(object):
 
     .. warning::
 
-        SQLAlchemy bulk operation currently NOT supported, so this code
-        will not work::
+        SQLAlchemy bulk operation currently **NOT** supported, so this code
+        won't work::
 
             # bulk updates
             session.query(Test).update({"data": 'x'})

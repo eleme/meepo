@@ -1,16 +1,15 @@
 # -*- coding: utf-8 -*-
 
 """
-The core pub part of meepo event system. Meepo follows events from different
-sources, e.g. mysql binlog and sqlalchemy events, and shape them into
-``table_action pk`` format event, e.g.::
+Meepo's core concept is based event pubs, it follows mysql row-based binlog
+and sqlalchemy events system and shape them into ``table_action pk``
+format signals.
 
-    test_table_write 1
-    test_table_update 2
+Currently there are 2 pubs implemented: ``mysql_pub`` and ``sqlalchemy_pub``.
 
 The publishers and subscribers are connected with ``blinker.signal``.
 
-The publisher sends pk by::
+Publisher sends pk by::
 
     signal("table_action").send(pk)
 
@@ -21,16 +20,6 @@ And subscriber can accept the pk by::
     @sg.connect
     def dummy_print(pk):
         print(pk)
-
-    # or one-line connect
-    signal("table_action").connect(lambda pk: print(pk), weak=False)
-
-.. automodule:: meepo.pub.mysql
-    :members:
-
-.. automodule:: meepo.pub.sqlalchemy
-    :members:
-
 """
 
 from __future__ import absolute_import

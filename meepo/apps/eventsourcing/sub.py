@@ -1,12 +1,5 @@
 # -*- coding: utf-8 -*-
 
-"""
-EventSourcing - Sub
--------------------
-
-Subs for meepo eventsourcing app.
-"""
-
 from __future__ import absolute_import
 
 import datetime
@@ -26,7 +19,8 @@ def redis_es_sub(tables, redis_dsn, strict=False, namespace=None,
 
     This sub should be used together with sqlalchemy_es_pub, it will
     use MRedisEventStore as events storage layer and use the prepare-commit
-    pattern in sqlalchemy_es_pub to ensure 100% security on events recording.
+    pattern in :func:`sqlalchemy_es_pub` to ensure 100% security on
+    events recording.
 
     :param tables: tables to be event sourced.
     :param redis_dsn: the redis server to store event sourcing events.

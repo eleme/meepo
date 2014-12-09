@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-EventSourcing - PrepareCommit
------------------------------
-
 Prepare Commit also known as Two-Phase Commit, for basic concept about it,
 refer to http://en.wikipedia.org/wiki/Two-phase_commit_protocol
+
 
 The two phase commit feature implemented in meepo is used to make sure event
 100% reliably recorded in eventsourcing, and it's not a strict traditional
@@ -71,10 +69,10 @@ def _redis_strict_pc(func):
 
 
 class MRedisPrepareCommit(MPrepareCommit):
-    """Prepare Commit based on redis.
+    """Prepare Commit session based on redis.
 
     This prepare commit records sqlalchemy session, and should be used with
-    meepo.pub.sqlalchemy_es_pub.
+    :func:`sqlalchemy_es_pub`.
 
     :param redis_dsn: the redis instance uri
     :param strict: by default the exceptions happened in middle of

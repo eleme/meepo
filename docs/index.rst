@@ -15,6 +15,12 @@ This documentation consists of two parts:
 
 Meepo source code is hosted on Github: https://github.com/eleme/meepo
 
+.. contents::
+   :local:
+   :depth: 2
+   :backlinks: none
+
+
 Features
 ========
 
@@ -65,8 +71,8 @@ To install the latest released version of Meepo::
 Usage
 =====
 
-Meepo use signal to hook into the events of mysql binlog and sqlalchemy, the
-hook is very easy to install.
+Meepo use blinker signal to hook into the events of mysql binlog and
+sqlalchemy, the hook is very easy to install.
 
 Hook with MySQL's binlog events:
 
@@ -82,30 +88,51 @@ Hook with SQLAlchemy's events:
     from meepo.pub import sqlalchemy_pub
     sqlalchemy_pub(session)
 
-Try out the demo scripts in ``example/tutorial`` for how meepo events works.
+Then you can connect to the signal and do tasks based the signal:
+
+.. code:: python
+
+    sg = signal("test_write")
+
+    @sg.connect
+    def print_test_write(pk)
+        print("test_write -> %s" % pk)
+
+Try out the demo scripts in ``example/tutorial`` for more about how meepo
+event works.
 
 
-Meepo Pub
-=========
-
-Meepo's core concept is based event pubs, it follows mysql row-based binlog
-and sqlalchemy events system and shape them into ``table_action pk``
-format signals.
-
-Currently there're 2 pubs implemented: ``mysql_pub`` and ``sqlalchemy_pub``.
+Pub Concept
+===========
 
 .. automodule:: meepo.pub
+
+
+MySQL Pub
+---------
+
+.. automodule:: meepo.pub.mysql
     :members:
 
+SQLAlchemy Pub
+--------------
+
+.. automodule:: meepo.pub.sqlalchemy
+    :members:
 
 Meepo Sub
 =========
 
+.. automodule:: meepo.sub
+
+Dummy Sub
+---------
+
 .. automodule:: meepo.sub.dummy
     :members:
 
-.. automodule:: meepo.sub.nano
-    :members:
+0MQ Sub
+-------
 
 .. automodule:: meepo.sub.zmq
     :members:
@@ -114,11 +141,16 @@ Meepo Sub
 Applications
 ============
 
-EventSroucing
+EventSourcing
 -------------
 
+Concept
+~~~~~~~
+
 .. automodule:: meepo.apps.eventsourcing
-    :members:
+
+Pub & Sub
+`````````
 
 .. automodule:: meepo.apps.eventsourcing.pub
     :members:
@@ -126,12 +158,21 @@ EventSroucing
 .. automodule:: meepo.apps.eventsourcing.sub
     :members:
 
+EventStore
+~~~~~~~~~~
+
 .. automodule:: meepo.apps.eventsourcing.event_store
-    :members:
+
+    .. autoclass:: meepo.apps.eventsourcing.event_store.MRedisEventStore
+        :members:
+
+PrepareCommit
+~~~~~~~~~~~~~
 
 .. automodule:: meepo.apps.eventsourcing.prepare_commit
-    :members:
 
+    .. autoclass:: meepo.apps.eventsourcing.prepare_commit.MRedisPrepareCommit
+        :members:
 
 Replicator
 ----------
