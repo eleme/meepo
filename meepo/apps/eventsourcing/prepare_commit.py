@@ -26,7 +26,7 @@ import redis
 from ...utils import d, s
 
 
-class MPrepareCommit(object):
+class PrepareCommit(object):
     """Prepare-Commit base class, defines the essential APIs.
     """
     def __init__(self):
@@ -43,10 +43,10 @@ class MPrepareCommit(object):
 
 
 def _redis_strict_pc(func):
-    """Strict deco for MRedisPrepareCommit
+    """Strict deco for RedisPrepareCommit
 
     The deco will choose whether to silent exception or not based on the
-    strict attr in MRedisPrepareCommit object.
+    strict attr in RedisPrepareCommit object.
     """
     phase = "session_%s" % func.__name__
 
@@ -68,7 +68,7 @@ def _redis_strict_pc(func):
     return wrapper
 
 
-class MRedisPrepareCommit(MPrepareCommit):
+class RedisPrepareCommit(PrepareCommit):
     """Prepare Commit session based on redis.
 
     This prepare commit records sqlalchemy session, and should be used with
@@ -87,7 +87,7 @@ class MRedisPrepareCommit(MPrepareCommit):
     """
     def __init__(self, redis_dsn, strict=False, namespace=None, ttl=3600*24,
                  socket_timeout=1, **kwargs):
-        super(MRedisPrepareCommit, self).__init__()
+        super(RedisPrepareCommit, self).__init__()
 
         self.r = redis.StrictRedis.from_url(
             redis_dsn, socket_timeout=socket_timeout, **kwargs)

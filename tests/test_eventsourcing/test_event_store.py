@@ -9,12 +9,12 @@ logging.basicConfig(level=logging.DEBUG)
 
 import pytest
 
-from meepo.apps.eventsourcing.event_store import MRedisEventStore
+from meepo.apps.eventsourcing.event_store import RedisEventStore
 
 
 @pytest.fixture(scope="function")
 def redis_event_store(request, redis_dsn):
-    event_store = MRedisEventStore(redis_dsn)
+    event_store = RedisEventStore(redis_dsn)
 
     def fin():
         event_store.r.flushdb()

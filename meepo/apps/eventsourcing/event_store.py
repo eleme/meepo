@@ -10,7 +10,7 @@ import redis
 from ...utils import s, d
 
 
-class MEventStore(object):
+class EventStore(object):
     def __init__(self):
         pass
 
@@ -21,7 +21,7 @@ class MEventStore(object):
         pass
 
 
-class MRedisEventStore(MEventStore):
+class RedisEventStore(EventStore):
     """EventStore based on redis.
 
     The event store use namespace and event name as key and store primary
@@ -31,13 +31,13 @@ class MRedisEventStore(MEventStore):
 
     Init event store with redis_dsn::
 
-        event_store = MRedisEventStore("redis://localhost/", "store")
+        event_store = RedisEventStore("redis://localhost/", "store")
 
     You can also pass a function to namespace, it'll accept timestamp as
     arg, this can be used to separate events store based on hour, day or
     week etc.::
 
-        event_store = MRedisEventStore(
+        event_store = RedisEventStore(
             "redis://localhost/", lambda ts: "store:%s" % d(ts, "%Y%m%d"))
 
     Add a event with::
@@ -100,7 +100,7 @@ class MRedisEventStore(MEventStore):
 
     def __init__(self, redis_dsn, namespace=None, ttl=3600*24*3,
                  socket_timeout=1, **kwargs):
-        super(MRedisEventStore, self).__init__()
+        super(RedisEventStore, self).__init__()
 
         self.r = redis.StrictRedis.from_url(
             redis_dsn, socket_timeout=socket_timeout, **kwargs)

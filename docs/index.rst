@@ -163,7 +163,7 @@ EventStore
 
 .. automodule:: meepo.apps.eventsourcing.event_store
 
-    .. autoclass:: meepo.apps.eventsourcing.event_store.MRedisEventStore
+    .. autoclass:: meepo.apps.eventsourcing.event_store.RedisEventStore
         :members:
 
 PrepareCommit
@@ -171,7 +171,7 @@ PrepareCommit
 
 .. automodule:: meepo.apps.eventsourcing.prepare_commit
 
-    .. autoclass:: meepo.apps.eventsourcing.prepare_commit.MRedisPrepareCommit
+    .. autoclass:: meepo.apps.eventsourcing.prepare_commit.RedisPrepareCommit
         :members:
 
 Replicator

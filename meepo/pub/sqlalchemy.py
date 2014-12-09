@@ -46,7 +46,7 @@ from blinker import signal
 from sqlalchemy import event
 
 
-class MSQLAlchemyPub(object):
+class SQLAlchemyPub(object):
     """SQLAlchemy Pub.
 
     The install method will add 2 hooks on sqlalchemy events system:
@@ -226,10 +226,10 @@ class MSQLAlchemyPub(object):
 
 
 def sqlalchemy_pub(session, tables=None):
-    """Install sqlalchemy pub hook of MSQLAlchemyPub instance.
+    """Install sqlalchemy pub hook of SQLAlchemyPub instance.
 
     :param session: sqlalchemy db session.
     :param tables: which tables to enable sqlalchemy_pub.
     """
     # install sqlalchemy_pub hook
-    MSQLAlchemyPub().install(session, tables)
+    SQLAlchemyPub().install(session, tables)

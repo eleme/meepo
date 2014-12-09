@@ -2,12 +2,12 @@
 
 import pytest
 import redis
-from meepo.apps.eventsourcing.prepare_commit import MRedisPrepareCommit
+from meepo.apps.eventsourcing.prepare_commit import RedisPrepareCommit
 
 
 @pytest.fixture(scope="module")
 def redis_pc(redis_dsn):
-    pc = MRedisPrepareCommit(
+    pc = RedisPrepareCommit(
         redis_dsn, strict=False, namespace="meepo.test.event_store")
     pc.r.flushdb()
     return pc
@@ -20,7 +20,7 @@ def redis_strict_pc():
     We'll pass an error redis dsn here to make sure ConnectionError raised.
     """
     redis_dsn = "redis://non_exists:0/"
-    pc = MRedisPrepareCommit(
+    pc = RedisPrepareCommit(
         redis_dsn, strict=True, namespace="meepo.test.event_store")
     return pc
 

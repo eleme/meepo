@@ -9,8 +9,8 @@ import logging
 
 from blinker import signal
 
-from .event_store import MRedisEventStore
-from .prepare_commit import MRedisPrepareCommit
+from .event_store import RedisEventStore
+from .prepare_commit import RedisPrepareCommit
 
 
 def redis_es_sub(tables, redis_dsn, strict=False, namespace=None,
@@ -18,13 +18,13 @@ def redis_es_sub(tables, redis_dsn, strict=False, namespace=None,
     """Redis EventSourcing sub.
 
     This sub should be used together with sqlalchemy_es_pub, it will
-    use MRedisEventStore as events storage layer and use the prepare-commit
+    use RedisEventStore as events storage layer and use the prepare-commit
     pattern in :func:`sqlalchemy_es_pub` to ensure 100% security on
     events recording.
 
     :param tables: tables to be event sourced.
     :param redis_dsn: the redis server to store event sourcing events.
-    :param strict: arg to be passed to MRedisPrepareCommit. If set to True,
+    :param strict: arg to be passed to RedisPrepareCommit. If set to True,
      the exception will not be silent and may cause the failure of sqlalchemy
      transaction, user should handle the exception in the app side in this
      case.
@@ -39,7 +39,7 @@ def redis_es_sub(tables, redis_dsn, strict=False, namespace=None,
         raise ValueError("tables should be list")
 
     # install event store hook for tables
-    event_store = MRedisEventStore(
+    event_store = RedisEventStore(
         redis_dsn, namespace=namespace, ttl=ttl, socket_timeout=socket_timeout)
 
     def _es_event_sub(pk, event):
@@ -56,7 +56,7 @@ def redis_es_sub(tables, redis_dsn, strict=False, namespace=None,
         signal(event).connect(sub_func, weak=False)
 
     # install prepare-commit hook
-    prepare_commit = MRedisPrepareCommit(
+    prepare_commit = RedisPrepareCommit(
         redis_dsn, strict=strict, namespace=namespace,
         socket_timeout=socket_timeout)
 

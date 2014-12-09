@@ -9,10 +9,10 @@ import collections
 from blinker import signal
 from sqlalchemy import event
 
-from ...pub.sqlalchemy import MSQLAlchemyPub
+from ...pub.sqlalchemy import SQLAlchemyPub
 
 
-class MSQLAlchemyEventSourcingPub(MSQLAlchemyPub):
+class SQLAlchemyEventSourcingPub(SQLAlchemyPub):
     """SQLAlchemy EventSourcing Pub.
 
     Add eventsourcing to sqlalchemy_pub, three more signals added for tables:
@@ -111,9 +111,9 @@ class MSQLAlchemyEventSourcingPub(MSQLAlchemyPub):
 
 
 def sqlalchemy_es_pub(session, tables=None):
-    """Install sqlalchemy eventsourcing hook by MSQLAlchemyEventSourcingPub.
+    """Install sqlalchemy eventsourcing hook by SQLAlchemyEventSourcingPub.
 
     :param session: sqlalchemy session.
     :param tables: which tables to enable sqlalchemy_es_pub.
     """
-    MSQLAlchemyEventSourcingPub().install(session, tables)
+    SQLAlchemyEventSourcingPub().install(session, tables)
