@@ -8,6 +8,8 @@ import logging
 import time
 import ketama
 import zmq
+import os
+import signal
 
 from multiprocessing import Process, Queue
 from zmq.utils.strtypes import asbytes
@@ -149,12 +151,14 @@ class WorkerPool(object):
         self._queues = queues
 
         self._sentinel_worker = None
+        self.waiting_time = kwargs.pop("waiting_time", 10)
 
     def _make_worker(self, queue):
         return Worker(queue, *self._args, **self._kwargs)
 
     def terminate(self):
-        self._sentinel_worker.terminate()
+        os.kill(self._sentinel_worker.pid, signal.SIGINT)
+        self._sentinel_worker.join()
 
     def start(self):
         logger = logging.getLogger("meepo.replicator.sentinel")
@@ -167,30 +171,37 @@ class WorkerPool(object):
                 worker.start()
 
             logger.info("starting sentinel...")
-            while True:
-                logger.debug("ping {} worker".format(self._args[0]))
-                dead = qsize = 0
-                for queue, worker in worker_map.items():
-                    try:
-                        qsize += queue.qsize()
-                    except NotImplementedError:
-                        qsize = None
+            try:
+                while True:
+                    logger.debug("ping {} worker".format(self._args[0]))
+                    dead = qsize = 0
+                    for queue, worker in worker_map.items():
+                        try:
+                            qsize += queue.qsize()
+                        except NotImplementedError:
+                            qsize = None
 
-                    if not worker.is_alive():
-                        dead += 1
-                        logger.warn("{} worker {} dead, recreating...".format(
-                            self._args[0], worker.pid))
+                        if not worker.is_alive():
+                            dead += 1
+                            logger.warn(
+                                "{} worker {} dead, recreating...".format(
+                                    self._args[0], worker.pid))
 
-                        worker_map[queue] = self._make_worker(queue)
-                        worker_map[queue].start()
+                            worker_map[queue] = self._make_worker(queue)
+                            worker_map[queue].start()
 
-                msg = ["{} total qsize {}".format(self._args[0], qsize),
-                       "{} worker alive, {} worker dead".format(
-                           len(worker_map) - dead, dead)]
+                    msg = ["{} total qsize {}".format(self._args[0], qsize),
+                           "{} worker alive, {} worker dead".format(
+                               len(worker_map) - dead, dead)]
 
-                logger.info("; ".join(msg))
+                    logger.info("; ".join(msg))
 
-                time.sleep(10)
+                    time.sleep(self.waiting_time)
+            except KeyboardInterrupt:
+                pass
+            finally:
+                for worker in worker_map.values():
+                    worker.terminate()
 
         self._sentinel_worker = Process(target=_f)
         self._sentinel_worker.start()
@@ -237,6 +248,10 @@ class QueueReplicator(Replicator):
 
         callback func should receive two args: topic and pk, and then process
         the replication job.
+
+        Note: The callback func must return True/False. When passed a list of
+        pks, the func should return a list of True/False with the same length
+        of pks.
 
         :param topics: a list of topics
         :param workers: how many workers to process this topic
