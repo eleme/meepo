@@ -5,12 +5,11 @@
 
 import collections
 import logging
-import redis
 import time
 import ketama
+import zmq
 
 from multiprocessing import Process, Queue
-import zmq
 from zmq.utils.strtypes import asbytes
 
 from .._compat import Empty
@@ -36,11 +35,12 @@ class Worker(Process):
     def __init__(self, queue, name, cb, multi=False, logger_name=None,
                  retry=True, queue_limit=10000, max_retry_count=10,
                  max_retry_interval=60):
-        """kwargs:
-        multi: allow multiple pks to be sent in one callback.
-        retry: retry on pk if callback failed.
-        max_retry_count: max retry count for a single pk.
-        max_retry_interval: max sleep time when callback failed.
+        """
+        :param multi: allow multiple pks to be sent in one callback
+        :param retry: retry on pk if callback failed
+        :param queue_limit: queue size limit for deduplication
+        :param max_retry_count: max retry count for a single pk
+        :param max_retry_interval: max sleep time when callback failed
         """
         super(Worker, self).__init__()
         self.name = name
@@ -141,6 +141,8 @@ class Worker(Process):
 
 
 class WorkerPool(object):
+    """Manage a set of workers and recreate worker when worker dead.
+    """
     def __init__(self, queues, *args, **kwargs):
         self._args = args
         self._kwargs = kwargs
@@ -195,6 +197,8 @@ class WorkerPool(object):
 
 
 class Replicator(object):
+    """Replicator base class.
+    """
     def __init__(self, name="meepo.replicator.zmq"):
         # replicator logger naming
         self.name = name
@@ -204,14 +208,20 @@ class Replicator(object):
         raise NotImplementedError()
 
 
-class ZmqReplicator(Replicator):
-    """Replicator base class.
+class QueueReplicator(Replicator):
+    """Replicator using Queue as worker task queue
 
-    Trigger retrieve, process, store steps to do replication.
+    This Replicator receives events from upstream zmq devices and put them into
+    a set of python multiprocessing queues using ketama consistent hashing.
+    Each queue has a worker. We use :class:`WorkerPool` to manage a set of
+    queues.
     """
 
     def __init__(self, listen=None, **kwargs):
-        super(ZmqReplicator, self).__init__(**kwargs)
+        """
+        :param listen: zeromq dsn to connect, can be a list
+        """
+        super(QueueReplicator, self).__init__(**kwargs)
 
         self.listen = listen
 
@@ -227,6 +237,12 @@ class ZmqReplicator(Replicator):
 
         callback func should receive two args: topic and pk, and then process
         the replication job.
+
+        :param topics: a list of topics
+        :param workers: how many workers to process this topic
+        :param multi: whether pass multiple pks
+        :param queue_limit: when queue size is larger than the limit,
+        the worker should run deduplicate procedure
         """
         workers = kwargs.pop("workers", 1)
         multi = kwargs.pop("multi", False)
@@ -247,7 +263,7 @@ class ZmqReplicator(Replicator):
         return wrapper
 
     def run(self):
-        """Run zmq replicator.
+        """Run the replicator.
 
         Main process receive messages and distribute them to worker queues.
         """
@@ -280,114 +296,3 @@ class ZmqReplicator(Replicator):
         finally:
             for worker_pool in self.workers.values():
                 worker_pool.terminate()
-
-
-class RedisCacheReplicator(Replicator):
-    def __init__(self, listen, redis_dsn, namespace=None, **kwargs):
-        super(RedisCacheReplicator, self).__init__(**kwargs)
-
-        self.listen = listen
-        self.redis_dsn = redis_dsn
-        self.namespace = namespace or "meepo.repl.rcache"
-
-        self.r = redis.Redis.from_url(self.redis_dsn)
-
-        # init workers
-        self.workers = {}
-        self.update_queues = {}
-        self.delete_queues = {}
-
-        # init zmq socket
-        self.socket = zmq_ctx.socket(zmq.SUB)
-
-    def _cache_update_gen(self, table, serializer, multi=False):
-        def cache_update_multi(pks):
-            keys = ["%s:%s:%s" % (self.namespace, table, p) for p in pks]
-            self.logger.debug("cache update -> %s:%s" % (table, pks))
-            return [self.r.mset(dict(zip(keys, serializer(pks))))] * len(pks)
-
-        def cache_update(pk):
-            key = "%s:%s:%s" % (self.namespace, table, pk)
-            self.logger.debug("cache update -> %s:%s" % (table, pk))
-            return self.r.set(key, serializer(pk))
-        return cache_update_multi if multi else cache_update
-
-    def _cache_delete_gen(self, table):
-        def cache_delete(pks):
-            keys = set("%s:%s:%s" % (self.namespace, table, p) for p in pks)
-            self.logger.debug("cache delete -> %s:%s" % (table, pks))
-            return [self.r.delete(*keys) >= 0] * len(pks)
-        return cache_delete
-
-    def cache(self, *tables, **kwargs):
-        """Table cache serializer registry.
-
-        serializer callback should receive two args: topic and pk, and then
-        return the serialized bytes.
-        """
-        workers = kwargs.pop("workers", 1)
-        multi = kwargs.pop("multi", False)
-
-        def wrapper(func):
-            for table in tables:
-                # hash ring for cache update
-                queues = [Queue() for _ in range(workers)]
-                hash_ring = ketama.Continuum()
-                for q in queues:
-                    hash_ring[str(hash(q))] = q
-                self.update_queues[table] = hash_ring
-
-                cache_update = self._cache_update_gen(table, func, multi=multi)
-                self.workers[table] = [
-                    Worker("%s_cache_update" % table, q, cache_update,
-                           multi=multi,
-                           logger_name="%s.%s" % (self.name, table))
-                    for q in queues]
-
-                # single worker for cache delete
-                delete_q = Queue()
-                self.delete_queues[table] = delete_q
-                cache_delete = self._cache_delete_gen(table)
-                self.workers[table].append(
-                    Worker("%s_cache_delete" % table, delete_q, cache_delete,
-                           multi=True,
-                           logger_name="%s.%s" % (self.name, table)))
-
-                self.socket.setsockopt(zmq.SUBSCRIBE, asbytes(table))
-            return func
-        return wrapper
-
-    def run(self):
-        """Run redis cache replicator.
-
-        Main process receive messages, process and distribute them to worker
-        queues.
-        """
-        for workers in self.workers.values():
-            for w in workers:
-                w.start()
-
-        self.socket.connect(self.listen)
-        while True:
-            msg = self.socket.recv_string()
-            lst = msg.split()
-            if len(lst) == 2:
-                topic, pks = lst[0], [lst[1], ]
-            elif len(lst) > 2:
-                topic, pks = lst[0], lst[1:]
-            else:
-                self.logger.error("msg corrupt -> %s" % msg)
-                continue
-
-            self.logger.debug("redis cache replicator: {0} -> {1}".format(
-                topic, pks))
-            table, action = topic.rsplit('_', 1)
-            if action in ("write", "update"):
-                for pk in pks:
-                    self.update_queues[table][hash(pk)].put(pk)
-            elif action == "delete":
-                for pk in pks:
-                    self.delete_queues[table].put(pk)
-            else:
-                self.logger.error("msg corrupt -> %s" % msg)
-                continue
