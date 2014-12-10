@@ -8,15 +8,16 @@ from multiprocessing import Queue, Process, Manager
 from meepo.utils import setup_logger
 setup_logger("DEBUG")
 
-from meepo.apps.replicator import Worker, WorkerPool, QueueReplicator
+from meepo.apps.replicator.worker import Worker, WorkerPool
+from meepo.apps.replicator import QueueReplicator
 
 
 def test_worker():
-    result = Manager().dict()
+    result = Manager().list()
 
     def func():
         def f(pks):
-            result["pks"] = pks
+            result.extend(pks)
             return [True for _ in pks]
 
         queue = Queue()
@@ -30,10 +31,14 @@ def test_worker():
     try:
         p.start()
     finally:
-        p.join(timeout=1.3)
+        for i in range(200):
+            time.sleep(0.3)
+            if len(result) == 10:
+                break
+
         p.terminate()
 
-    assert result["pks"] == list(range(10))
+    assert [i for i in result] == list(range(10))
 
 
 def test_worker_retry():
@@ -61,7 +66,10 @@ def test_worker_retry():
     try:
         p.start()
     finally:
-        p.join(timeout=1.5)
+        for i in range(200):
+            time.sleep(0.3)
+            if result[0] == result[1] == result[2] == 4:
+                break
         p.terminate()
 
     assert result[0] == result[1] == result[2] == 4
@@ -101,7 +109,10 @@ def test_worker_pool():
     try:
         p.start()
     finally:
-        p.join(timeout=1)
+        for i in range(200):
+            time.sleep(0.3)
+            if len(result) == 3:
+                break
 
         assert len(result) == 3 and \
             set(itertools.chain(*result.values())) == set(range(30))
@@ -115,7 +126,10 @@ def test_worker_pool():
         for i in [30, 31, 32]:
             queues[0].put(i)
 
-        time.sleep(0.6)
+        for i in range(200):
+            time.sleep(0.3)
+            if set(itertools.chain(*result.values())) == set(range(33)):
+                break
 
         os.kill(p.pid, signal.SIGUSR1)
 
@@ -156,7 +170,11 @@ def test_queue_replicator():
     p.start()
     p.join()
 
-    time.sleep(10)
+    for i in range(200):
+        time.sleep(0.6)
+        if len(result) == 50:
+            break
+
     os.kill(rp.pid, signal.SIGINT)
     rp.join()
 
