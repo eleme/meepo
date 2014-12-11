@@ -11,7 +11,7 @@ import zmq
 from multiprocessing import Queue
 from zmq.utils.strtypes import asbytes
 
-from . import Replicator, zmq_ctx
+from . import Replicator
 from .worker import WorkerPool
 
 
@@ -24,20 +24,12 @@ class QueueReplicator(Replicator):
     queues.
     """
 
-    def __init__(self, listen=None, **kwargs):
-        """
-        :param listen: zeromq dsn to connect, can be a list
-        """
-        super(QueueReplicator, self).__init__(**kwargs)
-
-        self.listen = listen
+    def __init__(self, *args, **kwargs):
+        super(QueueReplicator, self).__init__(*args, **kwargs)
 
         # init workers
         self.workers = {}
         self.worker_queues = {}
-
-        # init zmq socket
-        self.socket = zmq_ctx.socket(zmq.SUB)
 
     def event(self, *topics, **kwargs):
         """Topic callback registry.

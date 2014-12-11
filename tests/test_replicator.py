@@ -3,13 +3,14 @@ import signal
 import itertools
 import time
 import zmq
+import random
 
 from multiprocessing import Queue, Process, Manager
 from meepo.utils import setup_logger
 setup_logger("DEBUG")
 
 from meepo.apps.replicator.worker import Worker, WorkerPool
-from meepo.apps.replicator import QueueReplicator
+from meepo.apps.replicator import QueueReplicator, RqReplicator
 
 
 def test_worker():
@@ -171,11 +172,54 @@ def test_queue_replicator():
     p.join()
 
     for i in range(200):
-        time.sleep(0.6)
+        time.sleep(0.9)
         if len(result) == 50:
             break
 
     os.kill(rp.pid, signal.SIGINT)
     rp.join()
 
+    assert set(int(i) for i in result) == set(range(50))
+
+
+def test_rq_replicator():
+    result = Manager().list()
+
+    def repl_process():
+        rq_repl = RqReplicator("tcp://127.0.0.1:7000")
+
+        @rq_repl.event("restaurant_update")
+        def job(pks):
+            i = random.randint(0, 5)
+            if i == 3:
+                raise Exception("random exception, pks: {}".format(pks))
+            result.extend(pks)
+
+        rq_repl.run()
+
+    consumer = Process(target=repl_process)
+    consumer.start()
+
+    time.sleep(1)
+
+    ctx = zmq.Context()
+
+    def send_string():
+        sock = ctx.socket(zmq.PUB)
+        sock.bind("tcp://127.0.0.1:7000")
+        time.sleep(0.5)
+        for i in range(50):
+            msg = "restaurant_update {}".format(i)
+            sock.send_string(msg)
+
+    producer = Process(target=send_string)
+    producer.start()
+    producer.join()
+
+    for i in range(200):
+        time.sleep(0.3)
+        if len(result) == 50:
+            break
+
+    consumer.terminate()
     assert set(int(i) for i in result) == set(range(50))
