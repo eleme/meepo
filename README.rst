@@ -33,7 +33,8 @@ Features
 
 Meepo can be used to do lots of things, including replication, eventsourcing,
 cache refresh/invalidate, real-time analytics etc. The limit is all the tasks
-should be row-based, since meepo only gives ``table_action pk`` events.
+should be row-based, since meepo only gives ``table_action`` -> ``pk``
+style events.
 
 * Row-based database replication.
 
