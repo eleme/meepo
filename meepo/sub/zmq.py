@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import itertools
 import logging
 
 from blinker import signal
@@ -30,15 +31,13 @@ def zmq_sub(bind, tables, forwarder=False, green=False):
     else:
         socket.bind(bind)
 
-    def _sub(table):
-        for action in ("write", "update", "delete"):
-            def _sub(pk, action=action):
-                msg = "%s_%s %s" % (table, action, pk)
-                socket.send_string(msg)
-                logger.debug("pub msg: %s" % msg)
-            signal("%s_%s" % (table, action)).connect(_sub, weak=False)
-
-    for table in set(tables):
-        _sub(table)
+    events = ("%s_%s" % (tb, action) for tb, action in
+              itertools.product(*[tables, ["write", "update", "delete"]]))
+    for event in events:
+        def _sub(pk):
+            msg = "%s %s" % (event, pk)
+            socket.send_string(msg)
+            logger.debug("pub msg: %s" % msg)
+        signal(event).connect(_sub, weak=False)
 
     return socket
