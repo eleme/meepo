@@ -51,17 +51,33 @@ def test_redis_event_store_add_by_ts(redis_event_store):
     assert times == [s[1] for s in stores]
 
 
-def test_redis_event_store_replay_by_ts(redis_event_store):
+def test_redis_event_store_replay(redis_event_store):
     start_time = int(time.time())
     times = list(range(start_time, start_time + 5))
 
     # add event
-    for i, pk in enumerate(range(1, 10, 2)):
+    pks = [str(i) for i in range(1, 10, 2)]
+    for i, pk in enumerate(pks):
         redis_event_store.add("test_write", pk, ts=times[i])
 
     # test replay by ts
-    assert redis_event_store.replay("test_write", ts=times[3]) == ['7', '9']
+    assert redis_event_store.replay("test_write") == pks
+    assert redis_event_store.replay("test_write", ts=times[3]) == pks[3:]
     assert redis_event_store.replay(
-        "test_write", ts=times[2], end_ts=times[3]) == ['5', '7']
+        "test_write", ts=times[2], end_ts=times[3]) == pks[2:4]
     assert redis_event_store.replay(
-        "test_write", end_ts=times[2]) == ['1', '3', '5']
+        "test_write", end_ts=times[2]) == pks[:3]
+
+
+def test_redis_event_store_query(redis_event_store):
+    start_time = int(time.time())
+    times = list(range(start_time, start_time + 5))
+
+    # add event
+    pks = [str(i) for i in range(1, 10, 2)]
+    for i, pk in enumerate(pks):
+        redis_event_store.add("test_write", pk, ts=times[i])
+
+    # test replay by ts
+    assert redis_event_store.query("test_write", pks[0]) == times[0]
+    assert redis_event_store.query("test_write", pks[3]) == times[3]

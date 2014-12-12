@@ -15,10 +15,16 @@ class EventStore(object):
         pass
 
     def add(self, event, pk, ts=None):
-        pass
+        raise NotImplementedError
 
-    def query(self, event, ts=None):
-        pass
+    def replay(self, event, ts=0, end_ts=None, with_ts=False):
+        raise NotImplementedError
+
+    def query(self, event, pk, ts=None):
+        raise NotImplementedError
+
+    def clear(self, event, ts=None):
+        raise NotImplementedError
 
 
 class RedisEventStore(EventStore):
@@ -72,6 +78,23 @@ class RedisEventStore(EventStore):
     You can also replay all events with it's latest updating time::
 
         event_store.replay("test_write", with_ts=True)
+
+    **Events Query**
+
+    You can query the last change timestamp of an event with query api.
+
+    Query records within current namespace::
+
+        event_store.query("test_write", 1)
+
+    The return value will either be int timestamp or None if record not
+    exists.
+
+    Add a timestamp to query events within other namespace (assume you
+    separate the event store namespace by day, you may want to query event
+    happened yesterday.)::
+
+        event_store.query("test_write", 1, ts=some_value)
 
     .. note::
 
@@ -185,6 +208,21 @@ class RedisEventStore(EventStore):
             return [s(e) for e in elements]
         else:
             return [(s(e[0]), int(e[1])) for e in elements]
+
+    def query(self, event, pk, ts=None):
+        """Query the last update timestamp of an event pk.
+
+        You can pass a timestamp to only look for events later than that
+        within the same namespace.
+
+        :param event: the event name.
+        :param pk: the pk value for query.
+        :param ts: query event pk after ts, default to None which will query
+         all span of current namespace.
+        """
+        key = self._keygen(event, ts)
+        pk_ts = self.r.zscore(key, pk)
+        return int(pk_ts) if pk_ts else None
 
     def clear(self, event, ts=None):
         """Clear all stored record of event.

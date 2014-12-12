@@ -42,7 +42,7 @@ class QueueReplicator(Replicator):
         :param workers: how many workers to process this topic
         :param multi: whether pass multiple pks
         :param queue_limit: when queue size is larger than the limit,
-        the worker should run deduplicate procedure
+         the worker should run deduplicate procedure
         """
         workers = kwargs.pop("workers", 1)
         multi = kwargs.pop("multi", False)
