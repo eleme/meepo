@@ -18,6 +18,9 @@ def zmq_sub(bind, tables, forwarder=False, green=False):
     """
     logger = logging.getLogger("meepo.sub.zmq_sub")
 
+    if not isinstance(tables, (list, set)):
+        raise ValueError("tables should be list or set")
+
     if not green:
         import zmq
     else:

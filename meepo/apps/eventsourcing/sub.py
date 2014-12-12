@@ -35,8 +35,8 @@ def redis_es_sub(tables, redis_dsn, strict=False, namespace=None,
     """
     logger = logging.getLogger("meepo.apps.eventsourcing.redis_es_sub")
 
-    if not isinstance(tables, list):
-        raise ValueError("tables should be list")
+    if not isinstance(tables, (list, set)):
+        raise ValueError("tables should be list or set")
 
     # install event store hook for tables
     event_store = RedisEventStore(

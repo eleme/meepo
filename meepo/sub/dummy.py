@@ -14,6 +14,9 @@ def print_sub(tables):
     logger = logging.getLogger("meepo.sub.print_sub")
     logger.info("print_sub tables: %s" % ", ".join(tables))
 
+    if not isinstance(tables, (list, set)):
+        raise ValueError("tables should be list or set")
+
     events = ("%s_%s" % (tb, action) for tb, action in
               itertools.product(*[tables, ["write", "update", "delete"]]))
     for event in events:
