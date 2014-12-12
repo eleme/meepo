@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
 
-"""Meepo Replicators based on events.
-"""
-
 from __future__ import absolute_import
 
 import ketama

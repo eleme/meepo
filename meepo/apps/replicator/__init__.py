@@ -5,10 +5,10 @@
 
 from __future__ import absolute_import
 
+__all__ = ["QueueReplicator", "RqReplicator"]
+
 import logging
 import zmq
-
-__all__ = ["QueueReplicator", "RqReplicator"]
 
 zmq_ctx = zmq.Context()
 
