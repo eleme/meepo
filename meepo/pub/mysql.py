@@ -141,9 +141,9 @@ def mysql_pub(mysql_dsn, tables=None, blocking=False, **kwargs):
         timestamp = datetime.datetime.fromtimestamp(event.timestamp)
 
         if isinstance(event, WriteRowsEvent):
-            sg_name = "{}_write".format(event.table)
+            sg_name = "%s_write" % event.table
             sg = signal(sg_name)
-            sg_raw = signal("{}_raw".format(sg_name))
+            sg_raw = signal("%s_raw" % sg_name)
 
             for row in rows:
                 pk = _pk(row["values"])
@@ -153,9 +153,9 @@ def mysql_pub(mysql_dsn, tables=None, blocking=False, **kwargs):
                 logger.debug("%s -> %s, %s" % (sg_name, pk, timestamp))
 
         elif isinstance(event, UpdateRowsEvent):
-            sg_name = "{}_update".format(event.table)
+            sg_name = "%s_update" % event.table
             sg = signal(sg_name)
-            sg_raw = signal("{}_raw".format(sg_name))
+            sg_raw = signal("%s_raw" % sg_name)
 
             for row in rows:
                 pk = _pk(row["after_values"])
@@ -165,9 +165,9 @@ def mysql_pub(mysql_dsn, tables=None, blocking=False, **kwargs):
                 logger.debug("%s -> %s, %s" % (sg_name, pk, timestamp))
 
         elif isinstance(event, DeleteRowsEvent):
-            sg_name = "{}_delete".format(event.table)
+            sg_name = "%s_delete" % event.table
             sg = signal(sg_name)
-            sg_raw = signal("{}_raw".format(sg_name))
+            sg_raw = signal("%s_raw" % sg_name)
 
             for row in rows:
                 pk = _pk(row["values"])

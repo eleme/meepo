@@ -125,7 +125,7 @@ class SQLAlchemyPub(object):
             return
 
         for action in ("write", "update", "delete"):
-            attr = "pending_{}".format(action)
+            attr = "pending_%s" % action
             if not hasattr(session, attr):
                 setattr(session, attr, set())
         session.meepo_unique_id = uuid.uuid4().hex
@@ -155,9 +155,9 @@ class SQLAlchemyPub(object):
             if tables and obj.__table__.fullname not in tables:
                 return
 
-            sg_name = "{}_{}".format(obj.__table__, action)
+            sg_name = "%s_%s" % (obj.__table__, action)
             sg = signal(sg_name)
-            sg_raw = signal("{}_raw".format(sg_name))
+            sg_raw = signal("%s_raw" % sg_name)
 
             pk = cls._pk(obj)
             if pk:
