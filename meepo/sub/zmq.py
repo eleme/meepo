@@ -26,7 +26,7 @@ def zmq_sub(bind, tables, forwarder=False, green=False):
     if not green:
         import zmq
     else:
-        from zmq.green import zmq
+        import zmq.green as zmq
 
     ctx = zmq.Context()
     socket = ctx.socket(zmq.PUB)
