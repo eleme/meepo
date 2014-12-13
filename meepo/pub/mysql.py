@@ -36,7 +36,6 @@ logger = logging.getLogger("meepo.pub.mysql_pub")
 import datetime
 import random
 
-from blinker import signal
 import pymysqlreplication
 from pymysqlreplication.row_event import (
     DeleteRowsEvent,
@@ -45,6 +44,7 @@ from pymysqlreplication.row_event import (
 )
 
 from .._compat import urlparse, str
+from ..signals import signal
 
 
 def mysql_pub(mysql_dsn, tables=None, blocking=False, **kwargs):

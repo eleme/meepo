@@ -5,7 +5,7 @@ from __future__ import absolute_import
 import itertools
 import logging
 
-from blinker import signal
+from ..signals import signal
 
 
 def zmq_sub(bind, tables, forwarder=False, green=False):

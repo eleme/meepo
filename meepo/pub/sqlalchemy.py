@@ -42,8 +42,9 @@ import logging
 
 import uuid
 
-from blinker import signal
 from sqlalchemy import event
+
+from ..signals import signal
 
 
 class SQLAlchemyPub(object):

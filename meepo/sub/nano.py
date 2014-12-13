@@ -4,7 +4,7 @@ from __future__ import absolute_import
 
 import logging
 
-from blinker import signal
+from ..signals import signal
 
 
 def nano_sub(bind, tables):
