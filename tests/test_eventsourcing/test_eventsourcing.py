@@ -2,14 +2,14 @@
 
 import pytest
 
-from blinker import signal
-
 from meepo.apps.eventsourcing.sub import redis_es_sub
+from meepo.signals import signal
 
 
 @pytest.fixture(scope="function")
-def es_sub(request, redis_dsn):
-    event_store, prepare_commit = redis_es_sub(["test"], redis_dsn)
+def es_sub(request, mock_session, redis_dsn):
+    event_store, prepare_commit = redis_es_sub(
+        mock_session, ["test"], redis_dsn)
 
     def fin():
         for action in ["write", "update", "delete"]:

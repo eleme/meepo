@@ -6,12 +6,12 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 
 import pytest
-from blinker import signal
 import sqlalchemy as sa
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.ext.declarative import declarative_base
 
 from meepo.pub import sqlalchemy_pub
+from meepo.signals import signal
 
 (t_writes, t_updates, t_deletes) = ([] for _ in range(3))
 

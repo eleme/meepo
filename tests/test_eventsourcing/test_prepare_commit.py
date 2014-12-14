@@ -2,6 +2,7 @@
 
 import pytest
 import redis
+
 from meepo.apps.eventsourcing.prepare_commit import RedisPrepareCommit
 
 

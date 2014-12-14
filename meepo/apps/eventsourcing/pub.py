@@ -6,10 +6,10 @@ import logging
 
 import collections
 
-from blinker import signal
 from sqlalchemy import event
 
 from ...pub.sqlalchemy import SQLAlchemyPub
+from ...signals import signal
 
 
 class SQLAlchemyEventSourcingPub(SQLAlchemyPub):

@@ -7,10 +7,10 @@ logging.basicConfig(level=logging.DEBUG)
 
 import pymysql
 import pytest
-from blinker import signal
 
 from meepo._compat import urlparse
 from meepo.pub import mysql_pub
+from meepo.signals import signal
 
 t_writes, t_updates, t_deletes, t_binlogs = [], [], [], []
 t_raw_writes, t_raw_updates, t_raw_deletes = [], [], []

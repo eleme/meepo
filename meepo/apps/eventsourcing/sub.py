@@ -7,14 +7,14 @@ import functools
 import itertools
 import logging
 
-from blinker import signal
+from ...signals import signal
 
 from .event_store import RedisEventStore
 from .prepare_commit import RedisPrepareCommit
 
 
-def redis_es_sub(tables, redis_dsn, strict=False, namespace=None,
-                 ttl=3600*24*3, socket_timeout=1):
+def redis_es_sub(session, tables, redis_dsn, strict=False,
+                 namespace=None, ttl=3600*24*3, socket_timeout=1):
     """Redis EventSourcing sub.
 
     This sub should be used together with sqlalchemy_es_pub, it will
@@ -22,6 +22,7 @@ def redis_es_sub(tables, redis_dsn, strict=False, namespace=None,
     pattern in :func:`sqlalchemy_es_pub` to ensure 100% security on
     events recording.
 
+    :param session: the sqlalchemy to bind the signal
     :param tables: tables to be event sourced.
     :param redis_dsn: the redis server to store event sourcing events.
     :param strict: arg to be passed to RedisPrepareCommit. If set to True,
@@ -60,8 +61,11 @@ def redis_es_sub(tables, redis_dsn, strict=False, namespace=None,
         redis_dsn, strict=strict, namespace=namespace,
         socket_timeout=socket_timeout)
 
-    signal("session_prepare").connect(prepare_commit.prepare, weak=False)
-    signal("session_commit").connect(prepare_commit.commit, weak=False)
-    signal("session_rollback").connect(prepare_commit.rollback, weak=False)
+    signal("session_prepare").connect(
+        prepare_commit.prepare, sender=session, weak=False)
+    signal("session_commit").connect(
+        prepare_commit.commit, sender=session, weak=False)
+    signal("session_rollback").connect(
+        prepare_commit.rollback, sender=session, weak=False)
 
     return event_store, prepare_commit

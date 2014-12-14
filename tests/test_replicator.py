@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+
+from __future__ import absolute_import
+
 import os
 import signal
 import itertools
@@ -6,11 +10,11 @@ import zmq
 import random
 
 from multiprocessing import Queue, Process, Manager
-from meepo.utils import setup_logger
-setup_logger("DEBUG")
 
 from meepo.apps.replicator.worker import Worker, WorkerPool
 from meepo.apps.replicator import QueueReplicator, RqReplicator
+from meepo.utils import setup_logger
+setup_logger("DEBUG")
 
 
 def test_worker():

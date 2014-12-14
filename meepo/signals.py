@@ -4,6 +4,28 @@ from __future__ import absolute_import
 
 from blinker import Namespace
 
+from ._compat import str, bytes
+
+
+def _monkey_patch_hashable_func():
+    def hashable_identity(obj):
+        if hasattr(obj, '__func__'):
+            return (id(obj.__func__), id(obj.__self__))
+        elif hasattr(obj, 'im_func'):
+            return (id(obj.im_func), id(obj.im_self))
+        elif isinstance(obj, (str, bytes)):
+            return obj
+        # hack for session hash info
+        elif hasattr(obj, "info"):
+            return str(sorted(getattr(obj, "info")))
+        else:
+            return id(obj)
+
+    import blinker._utilities
+    blinker._utilities.hashable_identity = hashable_identity
+_monkey_patch_hashable_func()
+
+
 # The namespace for code signals.  If you are not flask code, do
 # not put signals in here.  Create your own namespace instead.
 _signals = Namespace()
