@@ -34,7 +34,7 @@ def redis_es_sub(session, tables, redis_dsn, strict=False,
     :param ttl: expiration time for events stored, default to 3 days.
     :param socket_timeout: redis socket timeout.
     """
-    logger = logging.getLogger("meepo.apps.eventsourcing.redis_es_sub")
+    logger = logging.getLogger("meepo.sub.redis_es_sub")
 
     if not isinstance(tables, (list, set)):
         raise ValueError("tables should be list or set")

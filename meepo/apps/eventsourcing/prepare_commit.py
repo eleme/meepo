@@ -54,7 +54,7 @@ def _redis_strict_pc(func):
     def wrapper(self, session, *args, **kwargs):
         try:
             func(self, session, *args, **kwargs)
-            self.logger.debug("%s -> %s" % (phase, session.meepo_unique_id))
+            self.logger.debug("%s -> %s" % (session.meepo_unique_id, phase))
             return True
         except Exception as e:
             if self.strict:
@@ -93,7 +93,7 @@ class RedisPrepareCommit(PrepareCommit):
             redis_dsn, socket_timeout=socket_timeout, **kwargs)
         self.strict = strict
         self.ttl = ttl
-        self.logger = logging.getLogger("meepo.redis_pc")
+        self.logger = logging.getLogger("meepo.prepare_commit.redis_pc")
 
         if namespace is None:
             self.namespace = lambda ts: "meepo:redis_pc:%s" % d(ts, "%Y%m%d")

@@ -23,7 +23,7 @@ class SQLAlchemyEventSourcingPub(SQLAlchemyPub):
     The hook will use prepare-commit pattern to ensure 100% reliability on
     event sourcing.
     """
-    logger = logging.getLogger("meepo.apps.eventsourcing.sqlalchemy_pub")
+    logger = logging.getLogger("meepo.pub.sqlalchemy_es_pub")
 
     @classmethod
     def session_prepare(cls, session, _):
@@ -46,7 +46,7 @@ class SQLAlchemyEventSourcingPub(SQLAlchemyPub):
             for obj in objs:
                 evt_name = "%s_%s" % (obj.__table__.fullname, action)
                 evt[evt_name].add(cls._pk(obj))
-                cls.logger.debug("%s - session_prepare: %s -> %s".format(
+                cls.logger.debug("%s - session_prepare: %s -> %s" % (
                     session.meepo_unique_id, evt_name, evt))
         signal("session_prepare").send(session, event=evt)
 
