@@ -41,9 +41,7 @@ class SQLAlchemyEventSourcingPub(SQLAlchemyPub):
         for action in ("write", "update", "delete"):
             objs = getattr(session, "pending_%s" % action)
             # filter tables if possible
-            if tables:
-                objs = [o for o in objs if o.__table__.fullname in tables]
-            for obj in objs:
+            for obj in [o for o in objs if o.__table__.fullname in tables]:
                 evt_name = "%s_%s" % (obj.__table__.fullname, action)
                 evt[evt_name].add(cls._pk(obj))
                 cls.logger.debug("%s - session_prepare: %s -> %s" % (
@@ -64,7 +62,7 @@ class SQLAlchemyEventSourcingPub(SQLAlchemyPub):
 
         # normal session pub
         cls.logger.debug("%s - session_commit" % session.meepo_unique_id)
-        cls._session_pub(session)
+        cls._session_pub(session, session.info["meepo_es_tables"])
         signal("session_commit").send(session)
         cls._session_del(session)
 

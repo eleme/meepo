@@ -141,7 +141,7 @@ class SQLAlchemyPub(object):
         del session.pending_delete
 
     @classmethod
-    def _session_pub(cls, session):
+    def _session_pub(cls, session, tables):
         def _pub(obj, action):
             """Publish object pk values with action.
 
@@ -152,8 +152,7 @@ class SQLAlchemyPub(object):
             :param obj: sqlalchemy object
             :param action: action on object
             """
-            tables = getattr(session, "_meepo_sqlalchemy_pub_tables", [])
-            if tables and obj.__table__.fullname not in tables:
+            if not tables or obj.__table__.fullname not in tables:
                 return
 
             sg_name = "%s_%s" % (obj.__table__, action)
@@ -200,7 +199,7 @@ class SQLAlchemyPub(object):
             cls.logger.debug("skipped - session_commit")
             return
 
-        cls._session_pub(session)
+        cls._session_pub(session, session.info["meepo_tables"])
         cls._session_del(session)
 
     @classmethod
