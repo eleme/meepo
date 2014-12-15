@@ -2,8 +2,6 @@
 
 from __future__ import absolute_import
 
-from blinker import Namespace
-
 from ._compat import str, bytes
 
 
@@ -17,14 +15,16 @@ def _monkey_patch_hashable_func():
             return obj
         # hack for session hash info
         elif hasattr(obj, "info"):
-            return str(sorted(getattr(obj, "info")))
+            return str(sorted(getattr(obj, "info").items()))
         else:
             return id(obj)
 
-    import blinker._utilities
-    blinker._utilities.hashable_identity = hashable_identity
+    import blinker.base
+    blinker.base.hashable_identity = hashable_identity
 _monkey_patch_hashable_func()
 
+
+from blinker import Namespace
 
 # The namespace for code signals.  If you are not flask code, do
 # not put signals in here.  Create your own namespace instead.
