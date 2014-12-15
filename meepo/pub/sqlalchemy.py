@@ -204,7 +204,7 @@ class SQLAlchemyPub(object):
         cls._session_del(session)
 
     @classmethod
-    def install(cls, session, tables=None):
+    def install(cls, session, tables):
         """Install sqlalchemy_pub hooks.
 
         This method can be called multiple time safely.
@@ -212,21 +212,18 @@ class SQLAlchemyPub(object):
         :param session: sqlalchemy session to install the hook
         :param tables: tables to install the hook, leave None to pub all.
         """
-        cls.logger.debug("session_install")
-
-        if not hasattr(session, "_meepo_sqlalchemy_pub_tables"):
+        if "meepo_tables" not in session.info:
             # init listen tables
-            session._meepo_sqlalchemy_pub_tables = set()
+            session.info["meepo_tables"] = set(tables)
 
             # enable session_update & session_commit hook
             event.listen(session, "before_flush", cls.session_update)
             event.listen(session, "after_commit", cls.session_commit)
+        else:
+            session.info["meepo_tables"] |= set(tables)
 
-        if tables:
-            session._meepo_sqlalchemy_pub_tables |= set(tables)
 
-
-def sqlalchemy_pub(session, tables=None):
+def sqlalchemy_pub(session, tables):
     """Install sqlalchemy pub hook of SQLAlchemyPub instance.
 
     :param session: sqlalchemy db session.

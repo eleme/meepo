@@ -84,6 +84,11 @@ def session(mysql_dsn):
     return session
 
 
+def test_session_es_table_info(session):
+    assert session.info["meepo_es_tables"] == {"test"}
+    assert session().info["meepo_es_tables"] == {"test"}
+
+
 def test_sa_empty_commit(session):
     """Direct commit generates nothing
     """
