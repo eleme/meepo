@@ -39,7 +39,7 @@ def zmq_sub(bind, tables, forwarder=False, green=False):
     events = ("%s_%s" % (tb, action) for tb, action in
               itertools.product(*[tables, ["write", "update", "delete"]]))
     for event in events:
-        def _sub(pk):
+        def _sub(pk, event=event):
             msg = "%s %s" % (event, pk)
             socket.send_string(msg)
             logger.debug("pub msg: %s" % msg)
