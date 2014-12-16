@@ -22,6 +22,45 @@ class sqlalchemy_es_pub(sqlalchemy_pub):
 
     The hook will use prepare-commit pattern to ensure 100% reliability on
     event sourcing.
+
+    **Multi-Sessions Prepare Commit**
+
+    The 3 additional signals were attached to sqlalchemy session factory in
+    case of being used in multi-sessions environments.
+
+    If you only use one sqlalchemy session in your program, it's fine to use
+    ``session_prepare`` / ``session_commit`` as other signals.
+
+    But if you use multiple sessions, you can separate the prepare-commit
+    signals by:
+
+    * Separate sessions by settings ``info`` arg in session factory.
+
+      Because the info is the only attributes copied from session factory
+      to session instance.
+
+      ``meepo.signals`` monkey patched the blinker ``hashable_identity``
+      func to use the ``session.info`` for session hash.
+
+    * Provide session as sender when signal receivers connects.
+
+    For example::
+
+        # setting `info` in sqlalchemy session_factory
+        SessionA = sessionmaker(bind=engine_a, info={"name": "session_a"})
+        SessionB = sessionmaker(bind=engine_b, info={"name": "session_b"})
+
+        sqlalchemy_es_pub(SessionA)
+        sqlalchemy_es_pub(SessionB)
+
+        sg = signal("session_prepare")
+
+        def _sp_for_a(session, event):
+            print(session.info)
+        sg.connect(_sp_for_a, sender=SessionA)
+
+    Then the ``_sp_for_a`` will only receive prepare-commit related events
+    triggered by ``SessionA``.
     """
     logger = logging.getLogger("meepo.pub.sqlalchemy_es_pub")
 

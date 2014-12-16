@@ -70,6 +70,14 @@ class sqlalchemy_pub(object):
 
         sqlalchemy_pub(session, tables=["test"])
 
+    Tables can be added later, the duplicated tables will be automatically
+    merged::
+
+        pub = sqlalchemy_pub(session)
+        pub(["table_a", "table_b"])
+        pub(["table_b", "table_c"])
+        pub.tables == {"table_a", "table_b", "table_c"}
+
     Then use the session as usual and the events will be available.
 
     **Signals Illustrate**

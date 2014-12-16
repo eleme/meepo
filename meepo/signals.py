@@ -14,8 +14,8 @@ def _monkey_patch_hashable_func():
         elif isinstance(obj, (str, bytes)):
             return obj
         # hack for session hash info
-        elif hasattr(obj, "info") and "name" in obj.info:
-            return str(obj.info["name"])
+        elif hasattr(obj, "info"):
+            return hash(str(sorted(obj.info.items())))
         else:
             return id(obj)
 

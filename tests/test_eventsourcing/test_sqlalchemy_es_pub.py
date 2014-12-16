@@ -248,3 +248,18 @@ def test_sa_flush_rollback(session, model_cls):
     assert event == {"sid": sid, "event": {"test_write": {t_e.id}}}
 
     assert [t_writes, t_updates, t_deletes, s_commits] == [[]] * 4
+
+
+def test_sa_multi_sessions(session, session_b, model_cls):
+    def _sp_for_b(s, event):
+        assert s.info == session_b.info
+        assert event == {"test_write": {t_g.id}}
+    signal("session_prepare").connect(_sp_for_b, sender=session_b, weak=False)
+
+    t_f = model_cls(data='f')
+    session.add(t_f)
+    session.commit()
+
+    t_g = model_cls(data='g')
+    session_b.add(t_g)
+    session_b.commit()
