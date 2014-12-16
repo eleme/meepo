@@ -87,5 +87,5 @@ def mock_session():
     class MockSession(object):
         def __init__(self):
             self.meepo_unique_id = uuid.uuid4().hex
-            self.info = {}
+            self.info = {"name": "mock"}
     return MockSession()
