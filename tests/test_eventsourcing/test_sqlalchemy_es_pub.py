@@ -77,16 +77,26 @@ def model_cls():
 def session(mysql_dsn):
     # sqlalchemy prepare
     engine = sa.create_engine(mysql_dsn)
-    session = scoped_session(sessionmaker(bind=engine, expire_on_commit=False))
+    session = scoped_session(sessionmaker(bind=engine,
+                                          expire_on_commit=False,
+                                          info={"name": "test_session"}))
 
-    # install sqlalchemy_es_pub hook
+    # install sqlalchemy_pub hook
     sqlalchemy_es_pub(session, tables=["test"])
     return session
 
 
-def test_session_es_table_info(session):
-    assert session.info["meepo_es_tables"] == {"test"}
-    assert session().info["meepo_es_tables"] == {"test"}
+@pytest.fixture(scope="module")
+def session_b(mysql_dsn):
+    # sqlalchemy prepare
+    engine = sa.create_engine(mysql_dsn)
+    session_b = scoped_session(sessionmaker(bind=engine,
+                                            expire_on_commit=False,
+                                            info={"name": "test_session_b"}))
+
+    # install sqlalchemy_pub hook
+    sqlalchemy_es_pub(session_b, tables=["test"])
+    return session_b
 
 
 def test_sa_empty_commit(session):

@@ -128,6 +128,10 @@ class RedisPrepareCommit(PrepareCommit):
 
         :param session: sqlalchemy session
         """
+        if not event:
+            self.logger.warn("event empty!")
+            return
+
         sp_key, sp_hkey = self._keygen(session)
         pickled_event = {k: pickle.dumps(v) for k, v in event.items()}
         with self.r.pipeline(transaction=False) as p:

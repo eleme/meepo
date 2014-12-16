@@ -62,13 +62,8 @@ def session(mysql_dsn):
     session = scoped_session(sessionmaker(bind=engine, expire_on_commit=False))
 
     # install sqlalchemy_pub hook
-    sqlalchemy_pub(session, tables=["test"])
+    sqlalchemy_pub(session)
     return session
-
-
-def test_session_tables_info(session):
-    assert session.info["meepo_tables"] == {"test"}
-    assert session().info["meepo_tables"] == {"test"}
 
 
 def test_sa_empty_commit(session):
@@ -185,3 +180,12 @@ def test_sa_flush_rollback(session, model_cls):
     session.rollback()
 
     assert [t_writes, t_updates, t_deletes] == [[]] * 3
+
+
+def test_sa_session_remove(session, model_cls):
+    session.remove()
+    t_f = model_cls(data='f')
+    session.add(t_f)
+    session.commit()
+
+    assert t_writes == [t_f.id]
