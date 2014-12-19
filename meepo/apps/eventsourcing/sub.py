@@ -7,6 +7,7 @@ import functools
 import itertools
 import logging
 
+from ..._compat import urlparse
 from ...signals import signal
 
 from .event_store import RedisEventStore
@@ -68,4 +69,46 @@ def redis_es_sub(session, tables, redis_dsn, strict=False,
     signal("session_rollback").connect(
         prepare_commit.rollback, sender=session, weak=False)
 
+    logger.debug("Redis event sourcing hook enabled.")
+
     return event_store, prepare_commit
+
+
+def statsd_es_sub(statsd_dsn, session, prefix="meepo.stats", rate=1):
+    """statsd sub for simple stats aggregation on event sourcing.
+
+    This sub will send stats info to statsd daemon for counter statistics,
+    this one is different from `meepo.sub.statsd_sub` which collect stats
+    for table events, the `statsd_es_sub` only collects statsd for session
+    events (prepare, commit, rollback).
+
+    You may wish to use this sub in combination of `meepo.sub.statsd_sub`
+    when used in event sourcing.
+
+    :param statsd_dsn: statsd server dsn
+    :param session: session to collect the stats.
+    :param prefix: statsd key prefix
+    :param rate: statsd sample rate, default to 100%.
+    """
+    logger = logging.getLogger("meepo.sub.statsd_es_sub")
+
+    import statsd
+
+    parsed = urlparse(statsd_dsn)
+    c = statsd.StatsClient(parsed.hostname, parsed.port, prefix=prefix)
+
+    _incr = lambda p: c.incr("%s.session_%s" % (prefix, p), rate=rate)
+
+    signal("session_prepare").connect(
+        lambda _, event: _incr("prepare"), sender=session, weak=False
+    )
+    signal("session_commit").connect(
+        lambda _: _incr("commit"), sender=session, weak=False
+    )
+    signal("session_rollback").connect(
+        lambda _: _incr("rollback"), sender=session, weak=False
+    )
+
+    logger.debug("Statsd event sourcing sub hook enabled.")
+
+    return c

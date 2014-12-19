@@ -39,7 +39,7 @@ is enough.
 
 from __future__ import absolute_import
 
-__all__ = ["sqlalchemy_es_pub", "redis_es_sub"]
+__all__ = ["sqlalchemy_es_pub", "redis_es_sub", "statsd_es_sub"]
 
 from .pub import sqlalchemy_es_pub
-from .sub import redis_es_sub
+from .sub import redis_es_sub, statsd_es_sub
