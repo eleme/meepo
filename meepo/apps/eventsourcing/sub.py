@@ -97,7 +97,7 @@ def statsd_es_sub(statsd_dsn, session, prefix="meepo.stats", rate=1):
     parsed = urlparse(statsd_dsn)
     c = statsd.StatsClient(parsed.hostname, parsed.port, prefix=prefix)
 
-    _incr = lambda p: c.incr("%s.session_%s" % (prefix, p), rate=rate)
+    _incr = lambda p: c.incr("session_%s" % p, rate=rate)
 
     signal("session_prepare").connect(
         lambda _, event: _incr("prepare"), sender=session, weak=False

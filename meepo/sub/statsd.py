@@ -37,7 +37,7 @@ def statsd_sub(statsd_dsn, tables, prefix="meepo.stats", rate=1):
     parsed = urlparse(statsd_dsn)
     c = statsd.StatsClient(parsed.hostname, parsed.port, prefix=prefix)
 
-    _key = lambda tb, ac: '.'.join([prefix, tb, ac])
+    _key = lambda tb, ac: "%s.%s" % (tb, ac)
 
     events = ("%s_%s" % (tb, action) for tb, action in
               itertools.product(*[tables, ["write", "update", "delete"]]))
