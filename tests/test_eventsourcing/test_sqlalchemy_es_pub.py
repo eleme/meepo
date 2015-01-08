@@ -151,8 +151,8 @@ def test_sa_multi_writes(session, model_cls):
 
     event, sid = s_events.pop(), s_commits.pop()
     assert event['sid'] == sid
-    obj = event['event']['test_write'].pop()
-    assert obj.id == t_d.id
+    objs = event['event']['test_write']
+    assert {obj.id for obj in objs} == {t_c.id, t_d.id}
 
     assert set(t_writes) == {t_c.id, t_d.id}
     assert [t_updates, t_deletes, s_rollbacks] == [[]] * 3
