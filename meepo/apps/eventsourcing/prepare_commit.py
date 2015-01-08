@@ -135,8 +135,8 @@ class RedisPrepareCommit(PrepareCommit):
         sp_key, sp_hkey = self._keygen(session)
 
         def _get_dump_value(value):
-            if hasattr(value, 'pk'):
-                return value.pk
+            if hasattr(value, '__mapper__'):
+                return value.__mapper__.primary_key[0].name
             return value
         pickled_event = {
             k: pickle.dumps({_get_dump_value(obj) for obj in objs})
