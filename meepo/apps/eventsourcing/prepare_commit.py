@@ -133,7 +133,13 @@ class RedisPrepareCommit(PrepareCommit):
             return
 
         sp_key, sp_hkey = self._keygen(session)
-        pickled_event = {k: pickle.dumps(obj.pk) for k, obj in event.items()}
+
+        def _get_dump_value(value):
+            if hasattr(value, 'pk'):
+                return value.pk
+            return value
+        pickled_event = {k: pickle.dumps({
+            _get_dump_value(obj) for obj in objs}) for k, objs in event.items()}
         with self.r.pipeline(transaction=False) as p:
             p.sadd(sp_key, session.meepo_unique_id)
             p.hmset(sp_hkey, pickled_event)
