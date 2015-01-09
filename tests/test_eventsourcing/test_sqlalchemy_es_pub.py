@@ -116,7 +116,9 @@ def test_sa_single_write(session, model_cls):
     session.commit()
 
     event, sid = s_events.pop(), s_commits.pop()
-    assert event == {"sid": sid, "event": {"test_write": {t_a.id}}}
+    assert event['sid'] == sid
+    obj = event['event']['test_write'].pop()
+    assert obj.id == t_a.id
 
     assert t_writes == [t_a.id]
     assert [t_updates, t_deletes, s_rollbacks] == [[]] * 3
@@ -131,7 +133,9 @@ def test_sa_single_flush_write(session, model_cls):
     session.commit()
 
     event, sid = s_events.pop(), s_commits.pop()
-    assert event == {"sid": sid, "event": {"test_write": {t_b.id}}}
+    assert event['sid'] == sid
+    obj = event['event']['test_write'].pop()
+    assert obj.id == t_b.id
 
     assert t_writes == [t_b.id]
     assert [t_updates, t_deletes, s_rollbacks] == [[]] * 3
@@ -146,7 +150,9 @@ def test_sa_multi_writes(session, model_cls):
     session.commit()
 
     event, sid = s_events.pop(), s_commits.pop()
-    assert event == {"sid": sid, "event": {"test_write": {t_c.id, t_d.id}}}
+    assert event['sid'] == sid
+    objs = event['event']['test_write']
+    assert {obj.id for obj in objs} == {t_c.id, t_d.id}
 
     assert set(t_writes) == {t_c.id, t_d.id}
     assert [t_updates, t_deletes, s_rollbacks] == [[]] * 3
@@ -159,7 +165,9 @@ def test_sa_single_update(session, model_cls):
     session.commit()
 
     event, sid = s_events.pop(), s_commits.pop()
-    assert event == {"sid": sid, "event": {"test_update": {t_a.id}}}
+    assert event['sid'] == sid
+    obj = event['event']['test_update'].pop()
+    assert obj.id == t_a.id
 
     assert set(t_updates) == {t_a.id}
     assert [t_writes, t_deletes, s_rollbacks] == [[]] * 3
@@ -173,7 +181,9 @@ def test_sa_single_flush_update(session, model_cls):
     session.commit()
 
     event, sid = s_events.pop(), s_commits.pop()
-    assert event == {"sid": sid, "event": {"test_update": {t_a.id}}}
+    assert event['sid'] == sid
+    obj = event['event']['test_update'].pop()
+    assert obj.id == t_a.id
 
     assert set(t_updates) == {t_a.id}
     assert [t_writes, t_deletes, s_rollbacks] == [[]] * 3
@@ -206,13 +216,22 @@ def test_sa_mixed_write_update_delete_and_multi_flushes(session, model_cls):
 
     # since the commit include a flush in it, two events will be triggered and
     # the later event contains the first event.
-    assert s_events[0] == {"sid": sid,
-                           "event": {"test_write": {t_e.id},
-                                     "test_update": {t_b.id}}}
-    assert s_events[1] == {"sid": sid,
-                           "event": {"test_write": {t_e.id},
-                                     "test_update": {t_b.id},
-                                     "test_delete": {t_c.id}}}
+    event = s_events[0]
+    assert event['sid'] == sid
+    write_obj = event['event']['test_write'].pop()
+    update_obj = event['event']['test_update'].pop()
+    assert write_obj.id == t_e.id
+    assert update_obj.id == t_b.id
+
+    event = s_events[1]
+
+    assert event['sid'] == sid
+    write_obj = event['event']['test_write'].pop()
+    update_obj = event['event']['test_update'].pop()
+    delete_obj = event['event']['test_delete'].pop()
+    assert write_obj.id == t_e.id
+    assert update_obj.id == t_b.id
+    assert delete_obj.id == t_c.id
 
 
 def test_sa_empty_rollback(session):
@@ -245,7 +264,9 @@ def test_sa_flush_rollback(session, model_cls):
     session.rollback()
 
     event, sid = s_events.pop(), s_rollbacks.pop()
-    assert event == {"sid": sid, "event": {"test_write": {t_e.id}}}
+    assert event['sid'] == sid
+    obj = event['event']['test_write'].pop()
+    assert obj.id == t_e.id
 
     assert [t_writes, t_updates, t_deletes, s_commits] == [[]] * 4
 
@@ -253,7 +274,7 @@ def test_sa_flush_rollback(session, model_cls):
 def test_sa_multi_sessions(session, session_b, model_cls):
     def _sp_for_b(s, event):
         assert s.info == session_b.info
-        assert event == {"test_write": {t_g.id}}
+        assert event['test_write'].pop().id == t_g.id
     signal("session_prepare").connect(_sp_for_b, sender=session_b, weak=False)
 
     t_f = model_cls(data='f')

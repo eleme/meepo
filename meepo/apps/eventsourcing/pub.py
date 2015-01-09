@@ -91,7 +91,7 @@ class sqlalchemy_es_pub(sqlalchemy_pub):
                         if o.__table__.fullname in self.tables]
             for obj in objs:
                 evt_name = "%s_%s" % (obj.__table__.fullname, action)
-                evt[evt_name].add(self._pk(obj))
+                evt[evt_name].add(obj)
                 self.logger.debug("%s - session_prepare: %s -> %s" % (
                     session.meepo_unique_id, evt_name, evt))
 
