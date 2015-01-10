@@ -44,7 +44,7 @@ def test_redis_prepare_commit_phase(mock_session, redis_pc):
 
 def test_redis_strict_prepare_commit_phase(mock_session, redis_strict_pc):
     with pytest.raises(redis.ConnectionError):
-        redis_strict_pc.prepare(mock_session, {"test_write": 1})
+        redis_strict_pc.prepare(mock_session, {"test_write": {1}})
 
     with pytest.raises(redis.ConnectionError):
         redis_strict_pc.commit(mock_session)
