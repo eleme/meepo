@@ -82,7 +82,7 @@ class sqlalchemy_es_pub(sqlalchemy_pub):
         if not hasattr(session, 'meepo_unique_id'):
             self._session_init(session)
 
-        evt = collections.defaultdict(set)
+        evt, pks = collections.defaultdict(set), set()
         for action in ("write", "update", "delete"):
             objs = getattr(session, "pending_%s" % action)
             # filter tables if possible
@@ -92,8 +92,9 @@ class sqlalchemy_es_pub(sqlalchemy_pub):
             for obj in objs:
                 evt_name = "%s_%s" % (obj.__table__.fullname, action)
                 evt[evt_name].add(obj)
+                pks.add(self._pk(obj))
                 self.logger.debug("%s - session_prepare: %s -> %s" % (
-                    session.meepo_unique_id, evt_name, evt))
+                    session.meepo_unique_id, evt_name, pks))
 
         # only trigger signal when event exists
         if evt:
