@@ -1,12 +1,10 @@
-import uuid
 import logging
+import os
 import pytest
+import tempfile
+import uuid
 
 from meepo.apps.eventsourcing.pub import sqlalchemy_es_pub
-
-from io import StringIO
-
-stream = StringIO()
 
 
 class sqlalchemy_test(sqlalchemy_es_pub):
@@ -47,24 +45,35 @@ def logger(request):
     for handler in logging.root.handlers:
         logging.root.removeHandler(handler)
 
-    logging.basicConfig(level=logging.DEBUG, stream=stream)
+    _, filename = tempfile.mkstemp()
+    logging.basicConfig(level=logging.DEBUG, filename=filename)
     logger = logging.getLogger("test")
 
     def fin():
         for handler in logging.root.handlers:
             logging.root.addHandler(handler)
+
+        try:
+            os.remove(filename)
+        except Exception:
+            pass
     request.addfinalizer(fin)
-    return logger
+
+    def _read():
+        with open(filename) as f:
+            return f.read()
+
+    return {"instance": logger, "read": _read}
 
 
 def test_session_prepare_log(logger):
-    sqlalchemy_test.logger = logger
+    sqlalchemy_test.logger = logger["instance"]
 
     session = Session()
     es = sqlalchemy_test(session)
     es.session_prepare(session, None)
 
-    a = stream.getvalue().strip().split('\n')
+    a = logger["read"]().strip().split('\n')
 
     uid = session.meepo_unique_id
 
