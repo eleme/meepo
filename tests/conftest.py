@@ -59,20 +59,20 @@ def mysql_dsn(conf):
         "passwd": parsed.password
     }
     conn = pymysql.connect(**db_settings)
-
     cursor = conn.cursor()
-    sql = """
-    DROP DATABASE IF EXISTS meepo_test;
-    CREATE DATABASE meepo_test;
-    DROP TABLE IF EXISTS meepo_test.test;
-    CREATE TABLE meepo_test.test (
-        id INT NOT NULL AUTO_INCREMENT,
-        data VARCHAR (256) NOT NULL,
-        PRIMARY KEY (id)
-    );
-    RESET MASTER;
-    """
-    cursor.execute(sql)
+
+    conn.begin()
+    cursor.execute("DROP DATABASE IF EXISTS meepo_test")
+    cursor.execute("CREATE DATABASE meepo_test")
+    cursor.execute("DROP TABLE IF EXISTS meepo_test.test")
+    cursor.execute('''CREATE TABLE meepo_test.test (
+                        id INT NOT NULL AUTO_INCREMENT,
+                        data VARCHAR (256) NOT NULL,
+                        PRIMARY KEY (id)
+                   )''')
+    cursor.execute("RESET MASTER")
+    conn.commit()
+
     logger.debug("executed")
 
     # release conn
