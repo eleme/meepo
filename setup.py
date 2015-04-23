@@ -9,7 +9,7 @@ install_requires = [
     "blinker>=1.3,<2.0",
     "mysql-replication>=0.5,<0.6.0",
     "pyketama>=0.2.0",
-    "pyzmq>=14.4.1,<15.0.0",
+    "pyzmq>=14.3.1,<15.0.0",
     "redis>=2.10.3,<2.11.0",
 ]
 
