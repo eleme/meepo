@@ -23,4 +23,4 @@ def print_sub(tables):
               itertools.product(*[tables, ["write", "update", "delete"]]))
     for event in events:
         signal(event).connect(
-            lambda pk: logger.info("%s -> %s" % event, pk), weak=False)
+            lambda pk: logger.info("%s -> %s", event, pk), weak=False)
