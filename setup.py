@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 
 # requirements
 install_requires = [
-    "SQLAlchemy>=0.9.0,<1.0.0",
+    "SQLAlchemy>=0.9.0,<1.1.0",
     "blinker>=1.3,<2.0",
     "mysql-replication>=0.5,<0.6.0",
     "pyketama>=0.2.0",
